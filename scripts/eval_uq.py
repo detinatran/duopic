@@ -158,6 +158,8 @@ def main():
             x = draws[:, j]
             diffs.append(wmedian(x[wl > 0], wl[wl > 0]) - wmedian(x[wc > 0], wc[wc > 0]))
         diffs = np.array(diffs)
+        (root / "eval_uq").mkdir(exist_ok=True)
+        np.save(root / "eval_uq" / "tau_diff_draws.npy", diffs)
         report["tau_lesion_minus_contra"] = {
             "at_fit": wmedian(tmap[wl > 0], wl[wl > 0]) - wmedian(tmap[wc > 0], wc[wc > 0]),
             "median": float(np.median(diffs)), "ci95": [float(np.percentile(diffs, 2.5)), float(np.percentile(diffs, 97.5))],
