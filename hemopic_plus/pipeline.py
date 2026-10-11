@@ -229,7 +229,7 @@ def run_subject(cfg, patient_num: int, out_root: Path):
         w = csv.writer(f)
         w.writerow(CSV_COLS)
         w.writerows(rows)
-    np.savez_compressed(fit_dir / "fit_curves.npz", t=t, cart_norm=cart_norm, arterial=cart_smooth,
+    np.savez_compressed(fit_dir / "fit_curves.npz", t=t, dt=float(dt), cart_norm=cart_norm, arterial=cart_smooth, w_curve=w_curve,
                         roi_ids=np.array([r["roi_id"] for r in rois], dtype=np.int32),
                         success=np.array([bool(fits[r["roi_id"]]["success"]) for r in rois]),
                         c_obs=np.stack([r["c_smooth"] for r in rois]) if rois else np.zeros((0, t_len)),
