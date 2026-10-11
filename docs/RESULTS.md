@@ -230,3 +230,50 @@ Kết luận:
 2. Bỏ tham số phân tán (không được dùng) và đo lại.
 3. Độ nhạy theo K_GM/K_WM, λ_delay. Chạy CVT (Fig. 4) và τ (Fig. 5c–d) bằng `Eval/` gốc trên `outputs/full`.
 4. Ngoại kiểm ISLES 2018.
+
+## 2g. Tìm siêu tham số bằng Optuna
+
+`scripts/tune_optuna.py`: Optuna (TPE, 80 trial), xuất phát từ `full_aif`. Mục tiêu là AUC tổn thương trung bình của CBF, CBV, MTT. **Chia bệnh nhân một lần (seed 0): 29 bệnh nhân để tune, 14 bệnh nhân giữ riêng làm tập kiểm tra mà Optuna không bao giờ thấy.** Mỗi trial chạy lại toàn bộ pipeline trên 29 bệnh nhân tune (khoảng 45 s trên máy van). Không gian tìm kiếm gồm:
+- số cụm GM/WM và trọng số toạ độ khi chia cụm;
+- độ làm trơn đường cong;
+- độ mạnh của các prior F, V, C_in;
+- độ dài phần đuôi dùng để tính mức CBF;
+- cách dựng bản đồ (phân bố CBF peak/TTP hay oSVD, có kẹp hay không và ngưỡng kẹp, nguồn CBV);
+- đầu vào (AIF tự động hay đường trung bình của mô);
+- mô hình mô (bể hay PDE).
+
+Hai trial đầu là hai cấu hình làm tay (`full_aif`, `full_aif_idvox_osvd_nc`). Số liệu thô: `docs/results/optuna/`.
+
+**Trên 14 bệnh nhân giữ riêng:**
+
+| | AUC CBF | AUC CBV | AUC MTT | trung bình | nRMSE toàn não |
+|---|---|---|---|---|---|
+| full_aif (mặc định) | 0.761 | 0.573 | 0.722 | 0.685 | 0.095 |
+| full_aif_idvox_osvd_nc (tốt nhất trước đây) | 0.769 | 0.624 | 0.713 | 0.702 | 0.095 |
+| **Optuna, trial 78** (tốt nhất trên tập tune) → `configs/full_tuned.yaml` | **0.780** | 0.624 | **0.743** | **0.716** | 0.091 |
+| Optuna, trial 75 (hạng 2) | 0.783 | 0.624 | 0.744 | 0.717 | 0.081 |
+| Optuna, trial 55 (hạng 3) | 0.777 | 0.624 | 0.738 | 0.713 | 0.095 |
+| trial 75 + PDE | 0.783 | 0.624 | 0.745 | 0.717 | 0.074 |
+| oSVD + AIF tự động (10 bn có AIF đạt chuẩn) | 0.773 | 0.648 | 0.744 | – | – |
+
+Kiểm định cặp (Wilcoxon) trên tập kiểm tra:
+- trial 78 so với full_aif (14 bn): trung bình **+0.030 (p = 1e−4)**; CBF +0.018 (p = 0.05), CBV +0.052 (p = 0.02), MTT +0.021 (p = 0.22);
+- trial 78 so với oSVD (10 bn): **CBF +0.027 (p = 0.02)**, CBV −0.001 (p = 0.9), MTT +0.026 (p = 0.28);
+- trial 75 so với oSVD (10 bn): CBF +0.033 (p = 0.002), CBV −0.001 (p = 0.9), MTT +0.029 (p = 0.28);
+- PDE so với bể, trên cấu hình đã tune: AUC chênh ≤ 0.001 (p &gt; 0.6), nRMSE toàn não 0.081 → 0.074.
+
+**Optuna chọn gì.** 5 cấu hình đứng đầu gần như giống nhau:
+- mô hình bể, đầu vào là **đường trung bình của mô** (không dùng AIF);
+- phân bố CBF theo oSVD không kẹp, CBV theo pha loãng chỉ thị từng voxel;
+- nhiều cụm chất xám hơn (12–16) và cụm gọn hơn về không gian (trọng số toạ độ 0.4–0.5);
+- làm trơn mạnh hơn (2.5–2.7 frame);
+- prior F rất yếu (λ_F ≈ 0.005, F do dữ liệu quyết định), prior V mạnh hơn (0.1–0.26);
+- phần đuôi dài hơn (≈ 0.38).
+
+AIF tự động chỉ được thử 9 lần (tốt nhất 0.725), PDE 2 lần (0.706).
+
+**Kết luận và lưu ý:**
+- Tune làm AUC trung bình tăng thêm khoảng +0.014 so với cấu hình tốt nhất làm tay, và +0.030 so với `full_aif`, **trên bệnh nhân không dùng để tune**. Phần tăng chủ yếu ở CBF và MTT.
+- Trên tập kiểm tra, cấu hình đã tune **không thua oSVD ở bản đồ nào**: CBF hơn có ý nghĩa, CBV ngang, MTT nhỉnh hơn nhưng chưa có ý nghĩa. Nhưng tập kiểm tra nhỏ (14 bn, chỉ 10 bn có oSVD), nên cần xác nhận trên dữ liệu khác (ví dụ ISLES 2018) hoặc bằng kiểm tra chéo lồng nhau.
+- CBV với `id_voxel` không phụ thuộc mô hình (AUC 0.624 ở mọi cấu hình dùng nó). CBV vẫn kém oSVD trên tập kiểm tra (0.624 so với 0.648 trên 10 bn có AIF; chênh trên cùng 10 bn ≈ 0).
+- Mô hình mô (bể, PDE hay neural PDE) hầu như không ảnh hưởng AUC ở cấu hình này. Nó chỉ cải thiện độ khớp đường cong.

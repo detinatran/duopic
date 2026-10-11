@@ -153,6 +153,8 @@ In healthy tissue the network sends about 85% of the flow through a fast tube an
 
 **Against oSVD with the same AIF** (36 subjects with an accepted AIF, `scripts/compare_osvd.py`), the neural PDE does not improve lesion detection over the tank. CBF is on par with oSVD, or +0.022 with the best map construction (`full_aif_idvox_osvd_nc`), the same as the tank (+0.024). CBV is lower than oSVD unless it is computed by indicator dilution. MTT is best with the plain PDE in `full` (+0.018 over oSVD, p = 0.007). No configuration beats oSVD on all three maps. The neural PDE's contribution is the curve fit and the reliability of the intervals, not the AUC.
 
+**Hyperparameter search** (`scripts/tune_optuna.py`, Optuna TPE, 80 trials on 29 patients, evaluated on 14 held-out patients; docs/RESULTS.md, section 2g). The tuned configuration, `configs/full_tuned.yaml`, raises the mean lesion AUC on the held-out patients from 0.685 (`full_aif`) and 0.702 (best hand-made config) to 0.716, mainly through CBF (0.780) and MTT (0.743). On those patients it is not worse than oSVD on any map: CBF +0.027 (p = 0.02), CBV equal, MTT +0.026 (n.s.). The held-out set is small (10 patients with oSVD maps). The search favours finer, more compact clusters, more temporal smoothing, a weak F prior and the tissue-mean input. The tissue model (tank, PDE) barely changes the AUC there; the PDE improves the curve fit.
+
 ### Uncertainty of the neural PDE
 
 The same posterior, Laplace + MCMC, voxel maps and checks run on the eight physical parameters of the neural PDE, with the network of the held-out fold frozen. Network uncertainty is measured with 3 extra bootstrap networks per fold.
@@ -207,6 +209,7 @@ scripts/
   make_npde_figures.py  # the PDE / neural PDE figures
   run_npde_uq.py      # uncertainty of the neural PDE: posterior, checks 1 and 3, network ensemble
   compare_osvd.py     # PDE / neural PDE against oSVD with the same AIF
+  tune_optuna.py      # Optuna hyperparameter search with a held-out test set of patients
 tests/                # the baseline must match the original HemoPIC
 run_experiments.ps1 / .sh   # runs every experiment
 ```
