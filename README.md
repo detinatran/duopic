@@ -151,6 +151,8 @@ HemoPIC models each ROI as one well-mixed tank, so its transit times are exponen
 
 In healthy tissue the network sends about 85% of the flow through a fast tube and keeps a slow tube for the tail; the transit-time CV (CTH/MTT) rises from 0.55 to 0.8–0.9. Whether the slow tube is true capillary heterogeneity or absorbs recirculation and AIF errors is not settled yet. Details, paired tests and limitations: [docs/NEURAL_PDE.md](docs/NEURAL_PDE.md) (in Vietnamese).
 
+**Against oSVD with the same AIF** (36 subjects with an accepted AIF, `scripts/compare_osvd.py`), the neural PDE does not improve lesion detection over the tank. CBF is on par with oSVD, or +0.022 with the best map construction (`full_aif_idvox_osvd_nc`), the same as the tank (+0.024). CBV is lower than oSVD unless it is computed by indicator dilution. MTT is best with the plain PDE in `full` (+0.018 over oSVD, p = 0.007). No configuration beats oSVD on all three maps. The neural PDE's contribution is the curve fit and the reliability of the intervals, not the AUC.
+
 ### Uncertainty of the neural PDE
 
 The same posterior, Laplace + MCMC, voxel maps and checks run on the eight physical parameters of the neural PDE, with the network of the held-out fold frozen. Network uncertainty is measured with 3 extra bootstrap networks per fold.
@@ -204,6 +206,7 @@ scripts/
   train_npde.py       # neural PDE with patient-level cross-validation
   make_npde_figures.py  # the PDE / neural PDE figures
   run_npde_uq.py      # uncertainty of the neural PDE: posterior, checks 1 and 3, network ensemble
+  compare_osvd.py     # PDE / neural PDE against oSVD with the same AIF
 tests/                # the baseline must match the original HemoPIC
 run_experiments.ps1 / .sh   # runs every experiment
 ```

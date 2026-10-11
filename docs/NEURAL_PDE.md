@@ -113,7 +113,32 @@ Kiểm định cặp theo bệnh nhân (Wilcoxon, 43 bệnh nhân):
 
 ![examples](figures/npde_examples_full_aif.png)
 
-### 4.4 Phát hiện phụ: ROI fit hỏng âm thầm
+### 4.4 So với oSVD dùng cùng AIF
+
+oSVD (deconvolution chuẩn, Wu et al. 2003) với cùng AIF tự động và TR thật là mốc so sánh công bằng (xem `docs/RESULTS.md`, mục 2d). AUC tổn thương trên 36 bệnh nhân có AIF đạt chuẩn (`scripts/compare_osvd.py`); trong ngoặc là chênh lệch so với oSVD và p (Wilcoxon):
+
+| | AUC CBF | AUC CBV | AUC MTT | r MTT toàn não với oSVD |
+|---|---|---|---|---|
+| oSVD + AIF tự động | 0.782 | 0.623 | 0.759 | – |
+| full (bể) | 0.786 (+0.003, p = 0.9) | 0.535 (−0.088, p = 5e−8) | 0.773 (+0.014, p = 0.014) | +0.54 |
+| full: PDE = neural PDE | 0.785 (+0.003, p = 0.9) | 0.547 (−0.076, p = 2e−7) | **0.777 (+0.018, p = 0.007)** | +0.49 |
+| full_aif (bể) | 0.790 (+0.007, p = 0.4) | 0.552 (−0.071, p = 2e−6) | 0.766 (+0.007, p = 0.11) | −0.01 |
+| full_aif: PDE | 0.787 (+0.005, p = 0.7) | 0.555 (−0.068, p = 6e−7) | 0.774 (+0.015, p = 0.03) | −0.14 |
+| full_aif: neural PDE | 0.788 (+0.006, p = 0.5) | 0.561 (−0.061, p = 1e−6) | 0.768 (+0.009, p = 0.09) | −0.21 |
+| bản đồ tốt nhất (idvox_osvd_nc), bể | **0.807 (+0.024, p = 3e−4)** | 0.623 (0.000) | 0.745 (−0.014, p = 0.03) | +0.61 |
+| bản đồ tốt nhất + mức CBF của PDE | 0.804 (+0.021, p = 0.002) | 0.623 (0.000) | 0.743 (−0.016, p = 0.03) | +0.54 |
+| bản đồ tốt nhất + mức CBF của neural PDE | 0.804 (+0.022, p = 0.002) | 0.623 (0.000) | 0.740 (−0.019, p = 0.01) | +0.48 |
+
+"Bản đồ tốt nhất" là cách dựng `full_aif_idvox_osvd_nc`: CBV theo pha loãng chỉ thị từng voxel, phân bố CBF trong ROI theo oSVD, mức CBF của ROI do mô hình fit. Ở hai dòng cuối, chỉ mức CBF của ROI được thay bằng của PDE / neural PDE (fit của `full_aif` và của cấu hình này trùng nhau hoàn toàn).
+
+**Kết luận: so với oSVD, neural PDE không tốt hơn mô hình bể ở khâu phát hiện tổn thương.**
+- **CBF**: ngang oSVD với cách dựng bản đồ thường; hơn oSVD (+0.022) khi dùng cách dựng tốt nhất, nhưng mô hình bể cũng hơn y như vậy (+0.024). Lợi thế này đến từ cách dựng bản đồ, không đến từ mô hình mô.
+- **CBV**: thua oSVD rõ (−0.06 đến −0.09) với cách dựng thường. Neural PDE thu hẹp được một chút (−0.071 → −0.061). Với cách dựng tốt nhất thì CBV chính là phép pha loãng chỉ thị nên ngang oSVD.
+- **MTT**: kết quả tốt nhất so với oSVD là **PDE ở `full`** (+0.018, p = 0.007), nhỉnh hơn mô hình bể (+0.014). Với AIF thật, PDE thường hơn oSVD (+0.015, p = 0.03), còn neural PDE thì không có ý nghĩa.
+- **Mức MTT giữa các bệnh nhân** vẫn không khớp oSVD khi dùng AIF thật (r = −0.01 với bể, −0.21 với neural PDE). Hạn chế này của HemoPIC+ (`docs/RESULTS.md`, mục 2d) chưa được giải quyết.
+- **Chưa có cấu hình nào thắng oSVD ở cả 3 bản đồ.** Đóng góp của neural PDE nằm ở độ khớp đường cong và độ tin cậy của khoảng sai số (mục 4.3, 6), không nằm ở AUC.
+
+### 4.5 Phát hiện phụ: ROI fit hỏng âm thầm
 
 Đếm trên kết quả pipeline: có **84 / 55 / 65 ROI** (baseline / full / full_aif, trên 651) được báo `success = True` nhưng sai số chuẩn hoá > 0.5, tức đường cong mô hình gần như bằng 0:
 - ở HemoPIC gốc, V co về khoảng 0.001;
@@ -125,6 +150,7 @@ PDE và neural PDE không sửa được những ROI này. Chúng nằm trong c�
 
 - **Sàn độ phân tán số.** Với 24 ô, CV nhỏ nhất là khoảng 0.25. Ở `full`, Pe chạm cận trên ở 69% ROI, tức dữ liệu muốn đường cong còn nhọn hơn mức mô hình cho phép. Tăng số ô làm lời giải dạng mode kém ổn định ở Pe lớn; cần một sơ đồ bậc cao hơn hoặc lời giải giải tích của bài toán Danckwerts.
 - **Chỉ số nRMSE vùng tổn thương không đo đúng cái được fit** (xem 4.2). Nên bổ sung chỉ số tính trên ROI chủ yếu là tổn thương, hoặc fit riêng phần tổn thương.
+- **So với oSVD**, neural PDE không cải thiện AUC tổn thương (mục 4.4); MTT theo mức giữa các bệnh nhân vẫn không khớp oSVD khi dùng AIF thật.
 - **MCMC của neural PDE hội tụ kém hơn bể trộn** (R-hat > 1.1 ở khoảng 16% ROI so với 5%), vì Pe và delay hay chạm cận. Xem mục 6.
 - **Ý nghĩa sinh lý của hai ống** cần kiểm chứng (xem 4.3).
 - Neural PDE chỉ có ích khi đầu vào là AIF thật. Đây là thêm một lý do để dùng `full_aif` làm cấu hình chính.
@@ -205,6 +231,7 @@ python tests/test_npde.py                                   # PDE chứa HemoPIC
 python scripts/run_pde.py configs/full.yaml --workers 8     # PDE thường (và HemoPIC+ được đánh bóng bằng L-BFGS-B)
 python scripts/train_npde.py configs/full.yaml --folds 5    # neural PDE, kiểm tra chéo theo bệnh nhân
 python scripts/make_npde_figures.py                         # docs/figures/npde_*.png
+python scripts/compare_osvd.py                              # so với oSVD cùng AIF (cần osvd_check.py trước)
 # uncertainty
 python scripts/train_npde.py configs/full_aif.yaml --extra-members 3         # thêm 3 mạng bootstrap mỗi fold
 python scripts/run_npde_uq.py configs/full_aif.yaml --workers 30             # posterior, Check 1, Check 3, bất định do mạng
