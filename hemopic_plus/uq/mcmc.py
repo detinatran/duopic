@@ -14,11 +14,13 @@ from .torch_model import DTYPE, objective
 
 
 def _logpost(batch, theta, roi_index, kappa_rows):
-    val = objective(batch, theta, roi_index=roi_index)[0]
-    lp = -kappa_rows * val
     lo = batch.lo[roi_index]
     hi = batch.hi[roi_index]
     inside = ((theta >= lo) & (theta <= hi)).all(dim=1)
+    # proposals outside the bounds are rejected anyway; evaluating them clamped
+    # keeps the model away from degenerate values (e.g. a huge Peclet number)
+    val = objective(batch, torch.minimum(torch.maximum(theta, lo), hi), roi_index=roi_index)[0]
+    lp = -kappa_rows * val
     return torch.where(inside & torch.isfinite(lp), lp, torch.full_like(lp, -np.inf))
 
 

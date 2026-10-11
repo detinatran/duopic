@@ -104,7 +104,10 @@ def disperse(x, dt, tau_d):
 
 def simulate(batch, theta, roi_index=None):
     """theta: (N, P) with N = len(roi_index) (defaults to one row per ROI).
-    Returns q_out (N, T) and c_fit (N, T)."""
+    Returns q_out (N, T) and c_fit (N, T). Batches that carry their own tissue
+    model (npde.uqbatch.PDEBatch) are dispatched to it."""
+    if getattr(batch, "is_pde", False):
+        return batch.pde_simulate(theta, roi_index)
     cfg = batch.cfg
     t = batch.t
     r, tau, v, f, cin = (torch.exp(theta[:, k]) for k in range(5))
@@ -131,6 +134,8 @@ def simulate(batch, theta, roi_index=None):
 
 def objective(batch, theta, roi_index=None, w=None):
     """Per-row value of the fit_roi_curve objective and its data part."""
+    if getattr(batch, "is_pde", False):
+        return batch.pde_objective(theta, roi_index, w)
     idx = torch.arange(theta.shape[0]) if roi_index is None else torch.as_tensor(roi_index)
     cfg = batch.cfg
     _, c_fit = simulate(batch, theta)
@@ -152,6 +157,8 @@ def objective(batch, theta, roi_index=None, w=None):
 def derived(batch, theta, roi_index=None):
     """Quantities that enter the maps: regional CBF level (mean of the outflow over
     the last tail_frac of the window, as in pipeline.py), V, MTT = 60 V / CBF, tau."""
+    if getattr(batch, "is_pde", False):
+        return batch.pde_derived(theta)
     cfg = batch.cfg
     q_out, _ = simulate(batch, theta)
     T = q_out.shape[1]

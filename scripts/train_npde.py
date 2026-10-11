@@ -62,6 +62,58 @@ def run_fold(args):
             cv_n.numpy(), cv_p.numpy())
 
 
+def run_member(args):
+    """Bootstrap member m >= 1 of fold k: the network is trained on a resample (with
+    replacement, by patient) of the fold's training patients, from another seed;
+    held-out ROIs are then refitted with it frozen."""
+    (k, m, fit_dirs, pde_root, train_idx, test_idx, steps, test_steps, cells, threads, shape_penalty) = args
+    torch.set_num_threads(threads)
+    t0 = time.time()
+    co = NN.load_cohort(fit_dirs, pde_root)
+    rng = np.random.default_rng(1000 * k + m)
+    subj = co.subject[train_idx]
+    pats = np.unique(subj)
+    boot = np.concatenate([train_idx[subj == p] for p in rng.choice(pats, size=pats.size, replace=True)])
+    tr, te = co.take(boot), co.take(test_idx)
+    torch.manual_seed(1000 + m)
+    net = NN.Closure(co.z.shape[1])
+    NN.fit(tr, net, train_closure=True, steps=steps, n_cells=cells, shape_penalty=shape_penalty, seed=m)
+    for prm in net.parameters():
+        prm.requires_grad_(False)
+    th, _, d, _, _ = NN.fit(te, net, steps=test_steps, n_cells=cells)
+    with torch.no_grad():
+        nu, phi = net(te.z)
+    print(f"  fold {k} member {m}: test data {float(d.median()):.4f}, {time.time() - t0:.0f}s", flush=True)
+    return k, m, th.numpy(), nu.numpy(), phi.numpy(), d.numpy()
+
+
+def extra_members(a, cfg, root, pde_root, pids, fit_dirs, co, roi_fold):
+    """Train bootstrap members 1..M per fold and append them to npde_theta.npz
+    (member 0 is the main network already there)."""
+    M = a.extra_members
+    jobs = [(k, m, fit_dirs, pde_root, np.where(roi_fold != k)[0], np.where(roi_fold == k)[0], a.steps, a.test_steps,
+             a.cells, a.threads, a.shape_penalty) for k in range(a.folds) for m in range(1, M + 1)]
+    print(f"[{cfg.name}] network ensemble: {M} bootstrap members per fold, {len(jobs)} trainings, {a.workers} at a time")
+    t0 = time.time()
+    B = len(co.roi_ids)
+    th = np.zeros((M, B, 8)); nu = np.zeros((M, B, 2)); phi = np.zeros((M, B, 2)); dat = np.zeros((M, B))
+    with ProcessPoolExecutor(max_workers=a.workers) as ex:
+        for k, m, t_, n_, p_, d_ in ex.map(run_member, jobs):
+            idx = np.where(roi_fold == k)[0]
+            th[m - 1, idx], nu[m - 1, idx], phi[m - 1, idx], dat[m - 1, idx] = t_, n_, p_, d_
+    print(f"[{cfg.name}] members done in {time.time() - t0:.0f}s")
+    for pid, fd in zip(pids, fit_dirs):
+        f = root.parent / f"{cfg.name}__npde" / fd.name / "npde_theta.npz"
+        z = dict(np.load(f))
+        sel = np.where(co.subject == pid)[0]
+        z["theta_members"] = np.concatenate([z["theta"][None], th[:, sel]])
+        z["nu_members"] = np.concatenate([z["nu"][None], nu[:, sel]])
+        z["phi_members"] = np.concatenate([z["phi"][None], phi[:, sel]])
+        z["n_cells"] = a.cells
+        np.savez_compressed(f, **z)
+    print(f"  held-out data term median per member: " + ", ".join(f"{np.median(d):.4f}" for d in dat))
+
+
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("config", type=Path)
@@ -74,6 +126,9 @@ def main():
     p.add_argument("--shape-penalty", type=float, default=1e-3)
     p.add_argument("--threads", type=int, default=6)
     p.add_argument("--patients", type=int, nargs="*")
+    p.add_argument("--extra-members", type=int, default=0,
+                   help="only train this many bootstrap networks per fold and append them (main run must exist)")
+    p.add_argument("--workers", type=int, default=10, help="parallel trainings for --extra-members")
     a = p.parse_args()
     cfg = load_config(a.config, {k: v for k, v in (("data_root", a.data_root), ("out_root", a.out_root)) if v})
     root = cfg.resolve("out_root") / cfg.name
@@ -87,6 +142,9 @@ def main():
     rng = np.random.default_rng(0)
     fold_of = {pid: f for pid, f in zip(rng.permutation(pids), np.arange(len(pids)) % a.folds)}
     roi_fold = np.array([fold_of[s] for s in co.subject])
+    if a.extra_members:
+        extra_members(a, cfg, root, pde_root, pids, fit_dirs, co, roi_fold)
+        return
     jobs = [(k, fit_dirs, pde_root, np.where(roi_fold != k)[0], np.where(roi_fold == k)[0], a.steps, a.test_steps, a.cells,
              a.threads, out_dir, a.shape_penalty) for k in range(a.folds)]
     print(f"[{cfg.name}] neural PDE: {len(pids)} patients, {len(co.roi_ids)} ROIs, {a.folds} folds, {a.cells} cells")
@@ -120,7 +178,7 @@ def main():
         for m in th:
             write_variant(fd, root.parent / f"{cfg.name}__{m}" / fd.name, b, cur[m][sel][:, :T],
                           dd[m]["CBF"] / ref["CBF"], dd[m]["V"] / ref["V"], b.cfg)
-        np.savez_compressed(root.parent / f"{cfg.name}__npde" / fd.name / "npde_theta.npz", roi_ids=b.roi_ids,
+        np.savez_compressed(root.parent / f"{cfg.name}__npde" / fd.name / "npde_theta.npz", roi_ids=b.roi_ids, n_cells=a.cells,
                             theta=th["npde"][sel], theta_pde=th["pdeadam"][sel], nu=fields["nu"][sel], phi=fields["phi"][sel],
                             cv_npde=fields["cv_npde"][sel], cv_pde=fields["cv_pde"][sel])
         for j, i in enumerate(sel):

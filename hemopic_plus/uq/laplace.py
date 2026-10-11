@@ -61,8 +61,10 @@ def prior_sd(batch, kappa):
     cfg = batch.cfg
     B, P = batch.lo.shape
     lam = [cfg.reg_lambda_logr, 0.0, cfg.lambda_v, cfg.lambda_f, cfg.lambda_in]
-    if P == 7:
+    if P >= 7:
         lam += [cfg.lambda_delay, cfg.lambda_dispersion]
+    if P == 8:
+        lam += [0.0]                                     # log Pe of the transport PDE: no penalty
     out = torch.empty(B, P, dtype=DTYPE)
     for k, l in enumerate(lam):
         if l > 0:

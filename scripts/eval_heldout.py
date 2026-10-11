@@ -67,7 +67,10 @@ def laplace_one(b, i, theta, w, kappa):
 def run_subject(args):
     fit_dir, folds, n_draws = args
     torch.set_num_threads(1)
-    b = load_subject(fit_dir)
+    return heldout_rows(load_subject(fit_dir), fit_dir.name, folds, n_draws)
+
+
+def heldout_rows(b, name, folds=5, n_draws=400):
     theta_all = LP.refine_map(b)
     g = torch.Generator().manual_seed(0)
     B, T = b.c_obs.shape
@@ -81,7 +84,7 @@ def run_subject(args):
             w[hide] = 0.0
             theta = fit_masked(b, i, theta_all[i], w)
             with torch.no_grad():
-                _, c_fit = simulate(b, theta[None, :])
+                _, c_fit = simulate(b, theta[None, :], roi_index=[i])
                 r = c_fit[0] - b.c_obs[i]
                 n_train = int((~hide).sum())
                 sigma2 = float((w * r ** 2).sum() / n_train)               # noise variance at weight 1
@@ -91,7 +94,7 @@ def run_subject(args):
             cov = laplace_one(b, i, theta, w, kappa)
             draws = LP.sample_gaussian(b.subset([i]), theta[None, :], cov[None], n=n_draws, seed=k)[0]
             with torch.no_grad():
-                _, c_draw = simulate(b, draws)
+                _, c_draw = simulate(b, draws, roi_index=[i] * draws.shape[0])
             wt = b.w[i][hide]
             noise_sd = torch.sqrt(sigma2 / torch.clamp(wt, min=1e-6))
             pred = c_draw[:, hide] + noise_sd[None, :] * torch.randn(n_draws, int(hide.sum()), generator=g, dtype=DTYPE)
@@ -103,7 +106,7 @@ def run_subject(args):
                 z = float(torch.distributions.Normal(0, 1).icdf(torch.tensor(hi_q, dtype=DTYPE)))
                 lo_n = c_fit[0][hide] - z * noise_sd
                 hi_n = c_fit[0][hide] + z * noise_sd
-                rows.append({"subject": fit_dir.name, "roi_id": int(b.roi_ids[i]), "tissue": b.tissue[i], "fold": k,
+                rows.append({"subject": name, "roi_id": int(b.roi_ids[i]), "tissue": b.tissue[i], "fold": k,
                              "level": lev, "n": int(hide.sum()),
                              "covered": float(((obs >= lo) & (obs <= hi)).double().mean()),
                              "covered_noise_only": float(((obs >= lo_n) & (obs <= hi_n)).double().mean())})

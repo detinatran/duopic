@@ -1,0 +1,151 @@
+{
+  "name": "full_aif__npde",
+  "n_subjects": 43,
+  "n_rois": 651,
+  "identifiability": {
+    "log_R": {
+      "pinned_frac": 0.0,
+      "ratio_median": 0.9781196449081461,
+      "data_informed_frac": 0.03840245775729647,
+      "prior_dominated_frac": 0.7357910906298003
+    },
+    "log_tau": {
+      "pinned_frac": 0.27342549923195086,
+      "ratio_median": 0.5571546902815031,
+      "data_informed_frac": 0.427061310782241,
+      "prior_dominated_frac": 0.05496828752642706
+    },
+    "log_V": {
+      "pinned_frac": 0.0,
+      "ratio_median": 0.8173936303504646,
+      "data_informed_frac": 0.006144393241167435,
+      "prior_dominated_frac": 0.05069124423963134
+    },
+    "log_F": {
+      "pinned_frac": 0.03379416282642089,
+      "ratio_median": 0.817545082070666,
+      "data_informed_frac": 0.0,
+      "prior_dominated_frac": 0.058823529411764705
+    },
+    "log_Cin": {
+      "pinned_frac": 0.0,
+      "ratio_median": 0.6996157544690756,
+      "data_informed_frac": 0.21812596006144394,
+      "prior_dominated_frac": 0.15821812596006143
+    },
+    "delay": {
+      "pinned_frac": 0.32872503840245776,
+      "ratio_median": 0.5787793172171316,
+      "data_informed_frac": 0.1853546910755149,
+      "prior_dominated_frac": 0.032036613272311214
+    },
+    "log_disp": {
+      "pinned_frac": 0.9938556067588326,
+      "ratio_median": 1.0967480037865465,
+      "data_informed_frac": 0.25,
+      "prior_dominated_frac": 0.75
+    },
+    "log_Pe": {
+      "pinned_frac": 0.46390168970814133,
+      "ratio_median": 0.5508096466776293,
+      "data_informed_frac": 0.4154727793696275,
+      "prior_dominated_frac": 0.2148997134670487
+    }
+  },
+  "rel_width_95": {
+    "CBF": {
+      "GM": 0.7765982363739308,
+      "WM": 0.6769281244576149,
+      "all": 0.7157384248330165
+    },
+    "V": {
+      "GM": 0.9297766675837167,
+      "WM": 0.6883427394880002,
+      "all": 0.7684041807756297
+    },
+    "MTT": {
+      "GM": 0.7916977811162652,
+      "WM": 0.6565714817275006,
+      "all": 0.7050183029833134
+    },
+    "tau": {
+      "GM": 1.661277356640933,
+      "WM": 1.7847261673679018,
+      "all": 1.7847261673679018
+    }
+  },
+  "convergence": {
+    "rhat_gt_1_1_frac": 0.16129032258064516,
+    "ess_min_median": 218.8829451015741
+  },
+  "fit_outside_ci_frac": {
+    "CBF": 0.026113671274961597,
+    "V": 0.0030721966205837174,
+    "MTT": 0.0030721966205837174
+  },
+  "selective": {
+    "CBF": {
+      "fractions": [
+        0.0,
+        0.1,
+        0.2,
+        0.3,
+        0.4
+      ],
+      "auc_uncertain_removed": [
+        0.784332293089069,
+        0.7857655401825011,
+        0.780520055441557,
+        0.7744869821731969,
+        0.7830752934325151
+      ],
+      "auc_random_removed": [
+        0.784332293089069,
+        0.7844864679916571,
+        0.7840118547196477,
+        0.7849184105461374,
+        0.7856223473430696
+      ],
+      "n": 43,
+      "u_lesion_median": 0.6739021828700615,
+      "u_contra_median": 0.6395592108600491,
+      "frac_patients_lesion_more_uncertain": 0.5116279069767442
+    },
+    "MTT": {
+      "fractions": [
+        0.0,
+        0.1,
+        0.2,
+        0.3,
+        0.4
+      ],
+      "auc_uncertain_removed": [
+        0.7576469436211893,
+        0.7742179133641833,
+        0.779180741856653,
+        0.7842885119031473,
+        0.7898108705180348
+      ],
+      "auc_random_removed": [
+        0.7576469436211893,
+        0.7579302373027933,
+        0.7572879128307078,
+        0.7577279888868421,
+        0.7574749598311626
+      ],
+      "n": 43,
+      "u_lesion_median": 0.47688038990337805,
+      "u_contra_median": 0.519900717633032,
+      "frac_patients_lesion_more_uncertain": 0.20930232558139536
+    }
+  },
+  "tau_lesion_minus_contra": {
+    "at_fit": 36.96073595466794,
+    "median": 24.57899045944214,
+    "ci95": [
+      19.04809174537659,
+      30.31420907974243
+    ],
+    "prob_lesion_faster": 0.0
+  }
+}

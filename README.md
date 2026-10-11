@@ -151,6 +151,23 @@ HemoPIC models each ROI as one well-mixed tank, so its transit times are exponen
 
 In healthy tissue the network sends about 85% of the flow through a fast tube and keeps a slow tube for the tail; the transit-time CV (CTH/MTT) rises from 0.55 to 0.8–0.9. Whether the slow tube is true capillary heterogeneity or absorbs recirculation and AIF errors is not settled yet. Details, paired tests and limitations: [docs/NEURAL_PDE.md](docs/NEURAL_PDE.md) (in Vietnamese).
 
+### Uncertainty of the neural PDE
+
+The same posterior, Laplace + MCMC, voxel maps and checks run on the eight physical parameters of the neural PDE, with the network of the held-out fold frozen. Network uncertainty is measured with 3 extra bootstrap networks per fold.
+
+![neural PDE calibration](docs/figures/uq_npde_calibration.png)
+
+| truth inside the 95% interval (check 3) | CBF | CBV | MTT | τ |
+|---|---|---|---|---|
+| HemoPIC+ full / full_aif | 96.8 / 97.0% | 99.5 / 99.8% | 86.0 / 88.1% | 74.8 / 70.3% |
+| neural PDE full / full_aif | 98.4 / 98.2% | 99.2 / 99.7% | **96.5 / 93.8%** | 82.0 / 78.4% |
+
+- The intervals are both narrower and better calibrated. CBF 95% width falls from 85% to 72% of the value (`full_aif`). The weak point of HemoPIC+, overconfident MTT intervals, is largely fixed, and the MTT error halves (15.7% → 8.9%): the tank had to trade MTT against delay, while the tube separates late arrival from transit.
+- Network uncertainty is more than 10 times smaller than the posterior: the voxel CBF sd across networks is 0.6%, against 16.9% from the physical parameters, and the AUC varies by at most 0.005 across networks.
+- With `full_aif`, removing uncertain CBF voxels no longer lowers the lesion AUC (HemoPIC+: 0.785 → 0.763; neural PDE: 0.784 → 0.783), because the lesion is no longer where the fit is poor.
+- The paper's τ claim stays reversed (+24.6 s, 95% CI [+19.0, +30.3] with `full_aif`).
+- Caveat: MCMC mixes worse than for the tank (R-hat > 1.1 in 16% of ROIs vs 5%), because Pe and the delay often sit at a bound. Details: [docs/NEURAL_PDE.md](docs/NEURAL_PDE.md), section 6.
+
 ## Repository layout
 
 ```
@@ -166,7 +183,8 @@ preprocess/           # raw data -> HemoPIC-ready data
 hemopic_plus/         # library
   config.py  io.py  signal.py  models.py  fit.py  pipeline.py  evaluation.py  aif.py  osvd.py
   uq/                 # uncertainty: torch_model.py (differentiable model), data.py, laplace.py, mcmc.py
-  npde/               # transport.py (PDE tissue model, exact modal solver), neural.py (two-tube neural closure)
+  npde/               # transport.py (PDE tissue model, exact modal solver), neural.py (two-tube neural closure),
+                      # uqbatch.py (runs the uq/ tools on the PDE model)
 scripts/
   run_cohort.py       # fits the whole cohort in parallel
   evaluate.py         # tracer nRMSE + lesion ROC AUC
@@ -185,6 +203,7 @@ scripts/
   run_pde.py          # refit every ROI with the transport PDE (and the polished tank) and evaluate
   train_npde.py       # neural PDE with patient-level cross-validation
   make_npde_figures.py  # the PDE / neural PDE figures
+  run_npde_uq.py      # uncertainty of the neural PDE: posterior, checks 1 and 3, network ensemble
 tests/                # the baseline must match the original HemoPIC
 run_experiments.ps1 / .sh   # runs every experiment
 ```

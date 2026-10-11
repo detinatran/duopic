@@ -80,8 +80,13 @@ def voxel_maps(fit_dir, batch, d_fit, d_samp, out):
 def run_subject(args):
     fit_dir, n_burn, n_keep, chains, seed = args
     torch.set_num_threads(1)
+    return fit_dir.name, posterior_for(load_subject(fit_dir), fit_dir, n_burn, n_keep, chains, seed)
+
+
+def posterior_for(b, fit_dir, n_burn, n_keep, chains, seed):
+    """Posterior of every ROI of batch b; maps and labels are read from fit_dir,
+    results go to fit_dir/uq. Returns the run summary."""
     t0 = time.time()
-    b = load_subject(fit_dir)
     out = fit_dir / "uq"
     out.mkdir(exist_ok=True)
     theta = LP.refine_map(b)
@@ -132,7 +137,7 @@ def run_subject(args):
             "frac_rhat_gt_1_1": float((rhat.max(dim=1).values > 1.1).double().mean()),
             "ess_min": float(ess.min()), "seconds": round(time.time() - t0, 1)}
     (out / "uq_info.json").write_text(json.dumps(info, indent=2), encoding="utf8")
-    return fit_dir.name, info
+    return info
 
 
 def main():

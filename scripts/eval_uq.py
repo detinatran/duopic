@@ -33,7 +33,7 @@ from hemopic_plus.evaluation import roc_auc  # noqa: E402
 from hemopic_plus.io import SEG4_REL, find_nii, list_patients, subject_id  # noqa: E402
 
 FRACS = (0.0, 0.1, 0.2, 0.3, 0.4)
-PARAMS = ("log_R", "log_tau", "log_V", "log_F", "log_Cin", "delay", "log_disp")
+PARAMS = ("log_R", "log_tau", "log_V", "log_F", "log_Cin", "delay", "log_disp", "log_Pe")
 
 
 def wmedian(x, w):
@@ -82,9 +82,10 @@ def main():
     p.add_argument("config", type=Path)
     p.add_argument("--data-root")
     p.add_argument("--out-root")
+    p.add_argument("--name", help="results folder under out_root (default: the config name), e.g. full_aif__npde")
     a = p.parse_args()
     cfg = load_config(a.config, {k: v for k, v in (("data_root", a.data_root), ("out_root", a.out_root)) if v})
-    root = cfg.resolve("out_root") / cfg.name
+    root = cfg.resolve("out_root") / (a.name or cfg.name)
     data_root = cfg.resolve("data_root")
     pids = [pid for pid in list_patients(root) if (root / subject_id(pid) / "uq" / "roi_posterior.csv").exists()]
     rng = np.random.default_rng(0)
@@ -106,7 +107,7 @@ def main():
             if wl or wc:
                 tau_items.append((wl, wc, z["tau"][i], float(np.exp(z["theta_map"][i][1]))))
 
-    report = {"name": cfg.name, "n_subjects": len(pids), "n_rois": len(rows)}
+    report = {"name": a.name or cfg.name, "n_subjects": len(pids), "n_rois": len(rows)}
 
     # 1. identifiability
     ident = {}
@@ -169,7 +170,7 @@ def main():
     out.mkdir(exist_ok=True)
     (out / "summary.json").write_text(json.dumps(report, indent=2), encoding="utf8")
 
-    print(f"[{cfg.name}] {len(pids)} subjects, {len(rows)} ROIs")
+    print(f"[{a.name or cfg.name}] {len(pids)} subjects, {len(rows)} ROIs")
     print("  identifiability (posterior sd / prior sd; pinned = at a bound):")
     for prm, d in ident.items():
         rm = "–" if d["ratio_median"] is None else f"{d['ratio_median']:.2f}"

@@ -75,26 +75,15 @@ def fit_pde(b, theta0, n_cells, maxiter=300, paths=None):
     return best_th, best_obj
 
 
-def write_variant(src, dst, b, c_new, ratio_cbf, ratio_v, cfg):
-    """Copy the fit folder and replace curves and maps."""
-    if dst.exists():
-        shutil.rmtree(dst)
-    dst.mkdir(parents=True)
-    for name in ("roi_labels_seg4_within_kmeans.nii.gz", "roi_fit_summary.csv", "run_info_core.json"):
-        shutil.copy2(src / name, dst / name)
-    z = dict(np.load(src / "fit_curves.npz"))
-    pos = {int(r): i for i, r in enumerate(z["roi_ids"])}
-    c_fit = z["c_fit"].copy()
-    for k, rid in enumerate(b.roi_ids):
-        c_fit[pos[int(rid)]] = c_new[k]
-    z["c_fit"] = c_fit
-    np.savez_compressed(dst / "fit_curves.npz", **z)
-
+def rescaled_maps(src, roi_ids, ratio_cbf, ratio_v, cfg):
+    """The fitted maps of src rescaled ROI by ROI (CBF level, and V unless CBV
+    comes from indicator dilution per voxel); MTT = 60 CBV / CBF with the
+    pipeline's floors and caps. Returns (image, cbf, cbv, mtt)."""
     lab = nib.load(str(src / "roi_labels_seg4_within_kmeans.nii.gz")).get_fdata().astype(int)
     img = nib.load(str(src / "HemoPIC_CBF.nii.gz"))
     cbf = img.get_fdata().astype(np.float64)
     cbv = nib.load(str(src / "HemoPIC_CBV.nii.gz")).get_fdata().astype(np.float64)
-    for k, rid in enumerate(b.roi_ids):
+    for k, rid in enumerate(roi_ids):
         m = lab == int(rid)
         cbf[m] *= ratio_cbf[k]
         if cfg.cbv_source != "id_voxel":
@@ -113,6 +102,24 @@ def write_variant(src, dst, b, c_new, ratio_cbf, ratio_v, cfg):
     ok = show & np.isfinite(cbv) & (cbv > 0) & (den > 0)
     mtt[ok] = 60.0 * cbv[ok] / den[ok]
     mtt = np.where(show, np.minimum(np.maximum(mtt, mtt_floor), mtt_cap), np.nan)
+    return img, cbf, cbv, mtt
+
+
+def write_variant(src, dst, b, c_new, ratio_cbf, ratio_v, cfg):
+    """Copy the fit folder and replace curves and maps."""
+    if dst.exists():
+        shutil.rmtree(dst)
+    dst.mkdir(parents=True)
+    for name in ("roi_labels_seg4_within_kmeans.nii.gz", "roi_fit_summary.csv", "run_info_core.json"):
+        shutil.copy2(src / name, dst / name)
+    z = dict(np.load(src / "fit_curves.npz"))
+    pos = {int(r): i for i, r in enumerate(z["roi_ids"])}
+    c_fit = z["c_fit"].copy()
+    for k, rid in enumerate(b.roi_ids):
+        c_fit[pos[int(rid)]] = c_new[k]
+    z["c_fit"] = c_fit
+    np.savez_compressed(dst / "fit_curves.npz", **z)
+    img, cbf, cbv, mtt = rescaled_maps(src, b.roi_ids, ratio_cbf, ratio_v, cfg)
     for tag, vol in (("CBF", cbf), ("CBV", cbv), ("MTT", mtt)):
         nib.save(nib.Nifti1Image(vol.astype(np.float32), img.affine, img.header), str(dst / f"HemoPIC_{tag}.nii.gz"))
 

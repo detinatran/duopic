@@ -21,10 +21,12 @@ sys.path.insert(0, str(ROOT / "scripts"))
 from make_figures import C, INK, INK2  # noqa: E402  (shared palette and styling)
 
 FIG = ROOT / "docs" / "figures"
-LABEL = {"baseline": "HemoPIC original", "full": "HemoPIC+ full", "full_aif": "HemoPIC+ full_aif"}
+LABEL = {"baseline": "HemoPIC original", "full": "HemoPIC+ full", "full_aif": "HemoPIC+ full_aif",
+         "full__npde": "neural PDE full", "full_aif__npde": "neural PDE full_aif"}
 PARAMS = [("log_R", "R"), ("log_tau", "τ"), ("log_V", "V"), ("log_F", "F"), ("log_Cin", "C_in"), ("delay", "delay"),
-          ("log_disp", "dispersion")]
+          ("log_disp", "dispersion"), ("log_Pe", "Pe")]
 SEQ = ["#2a78d6", "#8fb8ea", "#d7e5f6", "#b9b8b3"]   # learnt, partly, prior-dominated, pinned
+PREFIX = "uq_"
 
 
 def rows_of(out, cfg):
@@ -65,7 +67,7 @@ def fig_identifiability(out, cfgs):
                loc="lower center", ncol=4, fontsize=8, frameon=False)
     fig.suptitle("What does the data actually determine? Posterior sd / prior sd per ROI parameter", x=0.01, ha="left", color=INK)
     fig.tight_layout(rect=(0, 0.07, 1, 1))
-    fig.savefig(FIG / "uq_identifiability.png", dpi=160)
+    fig.savefig(FIG / f"{PREFIX}identifiability.png", dpi=160)
     plt.close(fig)
 
 
@@ -110,7 +112,7 @@ def fig_calibration(out, cfgs):
     ax.set_ylabel("truth inside the 95% interval")
     ax.set_title("Check 3: noise added to the fitted curves", loc="left", color=INK)
     fig.tight_layout()
-    fig.savefig(FIG / "uq_calibration.png", dpi=160)
+    fig.savefig(FIG / f"{PREFIX}calibration.png", dpi=160)
     plt.close(fig)
 
 
@@ -135,7 +137,7 @@ def fig_selective(out, cfgs):
     fig.legend(handles, [LABEL.get(c, c) for c in cfgs] + ["most uncertain voxels removed", "random voxels removed"],
                loc="lower center", ncol=len(cfgs) + 2, fontsize=8, frameon=False)
     fig.tight_layout(rect=(0, 0.08, 1, 1))
-    fig.savefig(FIG / "uq_selective.png", dpi=160)
+    fig.savefig(FIG / f"{PREFIX}selective.png", dpi=160)
     plt.close(fig)
 
 
@@ -164,7 +166,7 @@ def fig_tau(out, cfgs):
     ax.legend(fontsize=8, loc="upper center", ncol=1, frameon=False)
     ax.set_title("The paper's τ claim with uncertainty", loc="left", color=INK)
     fig.tight_layout()
-    fig.savefig(FIG / "uq_tau.png", dpi=160)
+    fig.savefig(FIG / f"{PREFIX}tau.png", dpi=160)
     plt.close(fig)
 
 
@@ -181,7 +183,7 @@ def fig_maps(out, data_root, cfgs, pid=22):
     xs, ys = np.where(seg[:, :, z])
     crop = (slice(xs.min() - 3, xs.max() + 4), slice(ys.min() - 3, ys.max() + 4))
     cols = [("CBF", "CBF / brain median", None), ("CBF", "CBF: posterior 95% width / value", "uq"),
-            ("CBF", "CBF: pipeline sd / value", "ens"), ("MTT", "MTT: posterior 95% width / value", "uq")]
+            ("CBF", "CBF: ensemble sd / value" if any("__npde" in c for c in cfgs) else "CBF: pipeline sd / value", "ens"), ("MTT", "MTT: posterior 95% width / value", "uq")]
     fig, axes = plt.subplots(len(cfgs), len(cols), figsize=(3.0 * len(cols), 2.9 * len(cfgs)), squeeze=False)
     for i, cfg in enumerate(cfgs):
         fd = out / cfg / f"training_{pid}"
@@ -214,7 +216,7 @@ def fig_maps(out, data_root, cfgs, pid=22):
             fig.colorbar(im, ax=ax, fraction=0.04, pad=0.02)
     fig.suptitle(f"Uncertainty maps, training_{pid} slice {z} (black contour = lesion)", x=0.01, ha="left", color=INK)
     fig.tight_layout()
-    fig.savefig(FIG / "uq_maps_example.png", dpi=150)
+    fig.savefig(FIG / f"{PREFIX}maps_example.png", dpi=150)
     plt.close(fig)
 
 
@@ -233,7 +235,11 @@ def fig_roi_example(out, data_root, cfgs, pid=22):
                              gridspec_kw={"width_ratios": [1.15, 1.15, 0.9]})
     for i, cfg in enumerate(cfgs):
         fd = out / cfg / f"training_{pid}"
-        b = load_subject(fd)
+        if "__npde" in cfg:
+            from hemopic_plus.npde.uqbatch import load_npde_subject
+            b = load_npde_subject(out / cfg.split("__")[0] / f"training_{pid}", fd)
+        else:
+            b = load_subject(fd)
         z = np.load(fd / "uq" / "posterior.npz")
         with open(fd / "uq" / "roi_posterior.csv", encoding="utf8") as fh:
             post = {int(r["roi_id"]): r for r in csv.DictReader(fh)}
@@ -248,8 +254,8 @@ def fig_roi_example(out, data_root, cfgs, pid=22):
             draws = torch.as_tensor(z["theta"][kz][::5], dtype=DTYPE)
             sub = b.subset([k] * draws.shape[0])
             with torch.no_grad():
-                _, cd = simulate(sub, draws)
-                _, cmap_ = simulate(b.subset([k]), torch.as_tensor(z["theta_map"][kz][None], dtype=DTYPE))
+                _, cd = simulate(sub, draws, roi_index=list(range(draws.shape[0])))
+                _, cmap_ = simulate(b.subset([k]), torch.as_tensor(z["theta_map"][kz][None], dtype=DTYPE), roi_index=[0])
             lo, hi = np.percentile(cd.numpy(), [2.5, 97.5], axis=0)
             ax.fill_between(t, lo, hi, color=C[i], alpha=0.25, lw=0, label="95% band of the model curve")
             ax.plot(t, b.c_obs[k].numpy(), "o", ms=2.5, color=INK2, label="measured (smoothed)")
@@ -288,7 +294,7 @@ def fig_roi_example(out, data_root, cfgs, pid=22):
         ax.legend(fontsize=7, loc="upper right", frameon=True, facecolor="#fcfcfb", edgecolor="none", markerscale=3)
     fig.suptitle(f"Posterior of single ROIs, training_{pid}", x=0.01, ha="left", color=INK)
     fig.tight_layout()
-    fig.savefig(FIG / "uq_roi_example.png", dpi=150)
+    fig.savefig(FIG / f"{PREFIX}roi_example.png", dpi=150)
     plt.close(fig)
 
 
@@ -329,7 +335,7 @@ def fig_widths(out, cfgs):
     ax.set_title("Lesion vs contralateral voxels", loc="left", color=INK)
     ax.legend(fontsize=7, frameon=False)
     fig.tight_layout()
-    fig.savefig(FIG / "uq_widths.png", dpi=160)
+    fig.savefig(FIG / f"{PREFIX}widths.png", dpi=160)
     plt.close(fig)
 
 
@@ -338,15 +344,20 @@ def main():
     p.add_argument("--out-root", default=str(ROOT / "outputs"))
     p.add_argument("--data-root", default=str(ROOT.parent / "HemoPIC" / "data" / "ISLES2017_Training"))
     p.add_argument("--configs", nargs="*", default=["baseline", "full", "full_aif"])
+    p.add_argument("--map-configs", nargs="*", help="rows of the map and ROI figures (default: configs without full_aif)")
+    p.add_argument("--prefix", default="uq_", help="figure file prefix, e.g. uq_npde_")
     a = p.parse_args()
+    global PREFIX
+    PREFIX = a.prefix
     out = Path(a.out_root)
     FIG.mkdir(parents=True, exist_ok=True)
     fig_identifiability(out, a.configs)
     fig_calibration(out, a.configs)
     fig_selective(out, a.configs)
     fig_tau(out, a.configs)
-    fig_maps(out, a.data_root, [c for c in a.configs if c != "full_aif"])
-    fig_roi_example(out, a.data_root, [c for c in a.configs if c != "full_aif"])
+    mc = a.map_configs or [c for c in a.configs if c != "full_aif"]
+    fig_maps(out, a.data_root, mc)
+    fig_roi_example(out, a.data_root, mc)
     fig_widths(out, a.configs)
     print("figures ->", FIG)
 

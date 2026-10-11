@@ -125,17 +125,94 @@ PDE và neural PDE không sửa được những ROI này. Chúng nằm trong c�
 
 - **Sàn độ phân tán số.** Với 24 ô, CV nhỏ nhất là khoảng 0.25. Ở `full`, Pe chạm cận trên ở 69% ROI, tức dữ liệu muốn đường cong còn nhọn hơn mức mô hình cho phép. Tăng số ô làm lời giải dạng mode kém ổn định ở Pe lớn; cần một sơ đồ bậc cao hơn hoặc lời giải giải tích của bài toán Danckwerts.
 - **Chỉ số nRMSE vùng tổn thương không đo đúng cái được fit** (xem 4.2). Nên bổ sung chỉ số tính trên ROI chủ yếu là tổn thương, hoặc fit riêng phần tổn thương.
-- **Chưa có uncertainty cho neural PDE.** Có thể làm ngay bằng cùng công cụ của `docs/UNCERTAINTY.md`: Laplace hoặc MCMC trên 8 tham số vật lý với mạng cố định, cộng ensemble 5 mạng của 5 fold cho phần bất định của mạng. Kiểm tra quan trọng nhất: khi sai số có hệ thống giảm, độ phủ của Check 1 (giấu frame, hiện chỉ đạt 84% ở mức 95%) có tiến về đúng mức không.
+- **MCMC của neural PDE hội tụ kém hơn bể trộn** (R-hat > 1.1 ở khoảng 16% ROI so với 5%), vì Pe và delay hay chạm cận. Xem mục 6.
 - **Ý nghĩa sinh lý của hai ống** cần kiểm chứng (xem 4.3).
 - Neural PDE chỉ có ích khi đầu vào là AIF thật. Đây là thêm một lý do để dùng `full_aif` làm cấu hình chính.
 
-## 5. Cách chạy
+## 6. Uncertainty của neural PDE
+
+Dùng lại nguyên bộ công cụ của `docs/UNCERTAINTY.md` trên 8 tham số vật lý của neural PDE, mạng của fold tương ứng được giữ cố định:
+
+- **posterior của tham số vật lý**: cùng posterior có nhiệt độ (mode = nghiệm fit), Laplace + MCMC (4 chuỗi, 3000 + 6000 bước); bản đồ sd và khoảng 95% theo voxel như HemoPIC+;
+- **bất định của chính mạng**: mỗi fold huấn luyện thêm 3 mạng trên tập bệnh nhân huấn luyện lấy mẫu lại có hoàn lại (bootstrap theo bệnh nhân, seed khác). Với bệnh nhân bị giữ lại, fit lại bằng từng mạng rồi đo độ dao động của CBF, V, MTT, τ và của AUC giữa 4 mạng;
+- **ba phép kiểm tra** như với HemoPIC+. Check 3 (semi-synthetic) fit lại bằng chính bộ ước lượng của PDE, xuất phát từ prior (L-BFGS-B, 3 điểm xuất phát của Pe).
+
+Lớp `hemopic_plus/npde/uqbatch.py` (`PDEBatch`) cho `uq/laplace.py`, `uq/mcmc.py` và các phép kiểm tra chạy nguyên vẹn trên mô hình PDE; nhánh HemoPIC+ cho kết quả y hệt trước khi sửa (đã kiểm: sai lệch 0). Chạy trên Windows, 35 phút cho cả hai cấu hình.
+
+### 6.1 Khoảng tin cậy có đúng không?
+
+![calibration](figures/uq_npde_calibration.png)
+
+**Check 3, semi-synthetic** (tỉ lệ đáp án nằm trong khoảng 95%; trong ngoặc: độ rộng trung vị / sai số trung vị của ước lượng, theo % giá trị thật):
+
+| | CBF | CBV (V) | MTT | τ |
+|---|---|---|---|---|
+| HemoPIC+ full | 96.8% (59% / 9.2%) | 99.5% (70% / 8.0%) | 86.0% (76% / 19.5%) | 74.8% (163% / 16.1%) |
+| neural PDE full | 98.4% (51% / 3.9%) | 99.2% (54% / 3.4%) | **96.5%** (62% / 7.6%) | 82.0% (145% / 20.4%) |
+| HemoPIC+ full_aif | 97.0% (87% / 8.3%) | 99.8% (93% / 6.0%) | 88.1% (75% / 15.7%) | 70.3% (130% / 16.0%) |
+| neural PDE full_aif | 98.2% (69% / 5.2%) | 99.7% (72% / 3.7%) | **93.8%** (59% / 8.9%) | 78.4% (95% / 11.7%) |
+
+**Khoảng tin cậy của neural PDE vừa hẹp hơn vừa đúng hơn.** Điểm yếu lớn nhất của HemoPIC+ là MTT quá tự tin (86–88%); với neural PDE, MTT gần đạt mức 95% (93.8–96.5%), và sai số của ước lượng MTT giảm khoảng một nửa (15.7–19.5% → 7.6–8.9%). Lý do: bể trộn buộc phải đổi MTT lấy delay (hai tham số bù trừ nhau), còn ống vận chuyển tách được thời gian đến muộn khỏi thời gian đi qua mô. τ cũng tốt lên (70–75% → 78–82%) nhưng vẫn còn quá hẹp.
+
+**Check 1, giấu frame** (mức 50 / 80 / 95%): neural PDE full 54.5 / 75.6 / 86.3%, full_aif 59.6 / 75.9 / 84.8%, so với HemoPIC+ 56.5 / 75.9 / 85.6% và 55.7 / 74.0 / 84.0%. Thay đổi rất ít: phần sai lệch còn lại ở mức 95% (đuôi dày của phần dư, nhất là quanh đỉnh) chưa được mô hình hoá.
+
+### 6.2 Độ rộng và Check 2
+
+![widths](figures/uq_npde_widths.png)
+
+Độ rộng trung vị của khoảng 95% (theo % giá trị), neural PDE so với HemoPIC+:
+
+| | CBF | CBV | MTT | τ |
+|---|---|---|---|---|
+| full | 52% (63%) | 56% (66%) | 62% (69%) | 191% (219%) |
+| full_aif | 72% (85%) | 77% (102%) | 71% (94%) | 178% (256%) |
+
+![selective](figures/uq_npde_selective.png)
+
+**Check 2, bỏ voxel bất định nhất.** MTT: AUC tăng ở cả hai cấu hình (0.766 → 0.792 và 0.758 → 0.790), như HemoPIC+. CBF với `full_aif`: HemoPIC+ **giảm** (0.785 → 0.763) vì chỗ bất định nhất chính là vùng tổn thương; với neural PDE, AUC giữ nguyên (0.784 → 0.783), và tổn thương không còn bất định hơn bên đối diện một cách có hệ thống (51% bệnh nhân so với 72%). Bể trộn fit kém vùng tổn thương nên bất định ở đó phình ra; mô hình fit được vùng tổn thương thì bất định không còn "đánh dấu" tổn thương nữa.
+
+### 6.3 Bất định do mạng neural
+
+| | AUC CBF qua 4 mạng | AUC CBV | AUC MTT | sd tương đối voxel CBF: mạng / posterior |
+|---|---|---|---|---|
+| full | 0.782–0.782 | 0.556–0.557 | 0.763–0.766 | 0.0% / 11.8% |
+| full_aif | 0.783–0.785 | 0.568–0.570 | 0.753–0.758 | 0.6% / 16.9% |
+
+Trên từng ROI, sd của log CBF giữa các mạng là 0.009 so với 0.19 của posterior (full_aif), log MTT 0.014 so với 0.18. **Bất định do mạng nhỏ hơn bất định của tham số vật lý hơn 10 lần**, và nhỏ hơn cả bất định do pipeline của HemoPIC+ (đổi seed và số cụm k-means: 7–9%). Điều này đúng như thiết kế: mạng chỉ đổi hình dạng phân bố thời gian đi qua, còn CBF, CBV, MTT do tham số vật lý quyết định. (Bất định do pipeline chưa được chạy lại cho neural PDE; nên coi 7–9% của HemoPIC+ là cận dưới của phần này.)
+
+![maps](figures/uq_npde_maps_example.png)
+
+Bản đồ ví dụ (bệnh nhân 22, hàng trên HemoPIC+ full_aif, hàng dưới neural PDE full_aif): khoảng 95% của CBF trong vùng tổn thương hẹp đi rõ; cột "ensemble sd" là đổi pipeline với HemoPIC+ và đổi mạng với neural PDE.
+
+![roi](figures/uq_npde_roi_example.png)
+
+### 6.4 Kết luận τ của bài báo
+
+![tau](figures/uq_npde_tau.png)
+
+τ(tổn thương) − τ(đối bên): neural PDE full +5.7 s [+3.5, +8.5], full_aif +24.6 s [+19.0, +30.3] (HemoPIC+: +6.3 s [+3.7, +9.4] và +16.8 s [+11.0, +22.9]). Kết luận "tổn thương hồi phục nhanh hơn" của bài báo **vẫn đảo chiều** khi đổi mô hình mô; độ lớn với AIF thật phụ thuộc mô hình (16.8 → 24.6 s), nên chỉ nên tin vào dấu, không nên tin vào con số.
+
+### 6.5 Hạn chế
+
+- **Hội tụ MCMC kém hơn**: R-hat > 1.1 ở 15.5% / 16.1% ROI (full / full_aif) so với 5.7% / 5.4% của HemoPIC+; ESS nhỏ nhất có trung vị 220–240. Pe chạm cận ở 46–75% ROI và delay ở 33% ROI (full_aif), nên posterior bị cắt ở biên. Nên chạy chuỗi dài hơn, hoặc tham số hoá Pe để không có cận cứng.
+- Check 3 sinh dữ liệu từ chính mô hình được kiểm tra (cho cả hai mô hình), nên nó đo độ tin cậy *khi mô hình đúng*. Check 1 (dữ liệu thật) gần như không đổi: phần sai lệch chưa được mô hình hoá vẫn làm khoảng 95% chỉ phủ 85–86%.
+- Mạng được giữ cố định trong posterior; bất định của mạng chỉ đo bằng 4 mạng bootstrap mỗi fold.
+
+## 7. Cách chạy
 
 ```bash
 python tests/test_npde.py                                   # PDE chứa HemoPIC+, bảo toàn khối lượng, MTT
 python scripts/run_pde.py configs/full.yaml --workers 8     # PDE thường (và HemoPIC+ được đánh bóng bằng L-BFGS-B)
 python scripts/train_npde.py configs/full.yaml --folds 5    # neural PDE, kiểm tra chéo theo bệnh nhân
 python scripts/make_npde_figures.py                         # docs/figures/npde_*.png
+# uncertainty
+python scripts/train_npde.py configs/full_aif.yaml --extra-members 3         # thêm 3 mạng bootstrap mỗi fold
+python scripts/run_npde_uq.py configs/full_aif.yaml --workers 30             # posterior, Check 1, Check 3, bất định do mạng
+python scripts/eval_uq.py configs/full_aif.yaml --name full_aif__npde        # độ rộng, Check 2, τ
+python scripts/make_uq_figures.py --configs full full__npde full_aif full_aif__npde \
+       --map-configs full_aif full_aif__npde --prefix uq_npde_               # docs/figures/uq_npde_*.png
 ```
+
+Số liệu tổng hợp: `docs/results/<config>/npde/` (PDE, neural PDE) và `docs/results/<config>/npde/uq/` (uncertainty).
 
 Đầu ra: `outputs/<config>__polish/`, `__pde/`, `__pdeadam/`, `__npde/`. Mỗi thư mục là một bộ fit đầy đủ (đường cong, bản đồ CBF/CBV/MTT), chấm điểm bằng đúng `evaluate_subject` như các cấu hình khác. Bản đồ của PDE và neural PDE là bản đồ đã fit được nhân lại theo từng ROI với mức CBF và V mới, giống cách làm trong `run_uq.py`.

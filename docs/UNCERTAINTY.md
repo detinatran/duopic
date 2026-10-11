@@ -168,3 +168,5 @@ python tests/test_uq_torch.py                                        # bản tor
 ```
 
 Đầu ra nằm trong `outputs/<config>/training_XX/uq/`, `.../ens/` và `outputs/<config>/eval_uq/`. Bản tóm tắt theo cohort (`summary.json`, `ensemble.json`, `heldout.csv.gz`, `semisynth.csv.gz`, `tau_diff_draws.npy`) được lưu trong `docs/results/<config>/uq/`.
+
+Uncertainty của neural PDE (cùng công cụ, cùng ba phép kiểm tra, cộng bất định do mạng): xem `docs/NEURAL_PDE.md`, mục 6.
