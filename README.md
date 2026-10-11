@@ -18,7 +18,7 @@ An extension of [HemoPIC](https://github.com/jhuldr/HemoPIC) (MICCAI 2026), a ph
 
 **Important caveat** (docs/RESULTS.md, section 2d): a standard oSVD deconvolution that uses the same automatic AIF and the true TR reaches lesion ROC AUCs on par with HemoPIC+ for CBF and MTT, and higher for CBV. Any comparison should use it as the baseline (`scripts/osvd_check.py`).
 
-Rationale and design: [docs/PLAN.md](docs/PLAN.md). Full results: [docs/RESULTS.md](docs/RESULTS.md). Uncertainty: [docs/UNCERTAINTY.md](docs/UNCERTAINTY.md). These documents are in Vietnamese.
+Rationale and design: [docs/PLAN.md](docs/PLAN.md). Full results: [docs/RESULTS.md](docs/RESULTS.md). Uncertainty: [docs/UNCERTAINTY.md](docs/UNCERTAINTY.md). PDE and neural PDE: [docs/NEURAL_PDE.md](docs/NEURAL_PDE.md). These documents are in Vietnamese.
 
 ## Main results
 
@@ -125,6 +125,32 @@ A side finding: polishing the Powell solution with L-BFGS-B changes the CBF leve
 
 To reproduce (after `run_cohort.py`): `run_uq.py`, `eval_heldout.py`, `eval_semisynth.py`, `eval_uq.py`, `run_ensemble.py`, then `make_uq_figures.py`; see [docs/UNCERTAINTY.md](docs/UNCERTAINTY.md). The cohort summaries are in `docs/results/<config>/uq/`.
 
+## Transport PDE and neural PDE
+
+HemoPIC models each ROI as one well-mixed tank, so its transit times are exponential. On all 651 ROIs the HemoPIC+ fits share a systematic misfit: they miss 14–35% of the bolus peak and overshoot just after it (5 to 16 standard errors). The tank is too blunt.
+
+**Transport PDE.** The tank is replaced by a tube with plug flow and longitudinal dispersion, ∂c/∂t = k(t)(−∂c/∂s + Pe⁻¹ ∂²c/∂s²), with a Danckwerts inlet driven by the same delayed and dispersed arterial input as HemoPIC+. Mass is conserved and the mean transit time stays V/F, so CBF, CBV and MTT keep their meaning. Pe → 0 is exactly HemoPIC+, so the PDE can only fit better. The tube is solved exactly within each frame as a sum of 24 exponential modes, from one symmetric eigendecomposition per ROI.
+
+**Neural PDE.** One tube can only narrow the transit times. ROIs that mix fast and slow tissue need them wider (capillary transit-time heterogeneity). The closure splits each ROI into two parallel tubes; the volume and flow fractions are predicted by a small MLP shared across all patients, from label-free ROI descriptors. Whatever the split, mass and the mean transit time are preserved, so the network can reshape the transit-time distribution but cannot change CBF, CBV or MTT by itself. Evaluation uses 5-fold cross-validation **by patient**: the network is frozen on held-out patients, and the plain PDE is refitted there with the same optimiser.
+
+![metrics](docs/figures/npde_metrics.png)
+
+| | brain nRMSE | lesion nRMSE | AUC CBF | AUC CBV | AUC MTT |
+|---|---|---|---|---|---|
+| `full_aif`: tank (HemoPIC+, polished) | 0.116 | 0.271 | 0.787 | 0.550 | 0.755 |
+| PDE | 0.108 | 0.277 | 0.784 | 0.563 | **0.763** |
+| neural PDE (held-out patients) | **0.094** | **0.265** | 0.784 | **0.568** | 0.758 |
+
+- With the true AIF (`full_aif`), the neural PDE lowers the held-out ROI error from 0.0445 to 0.0273 (median) and improves on the plain PDE in all 5 folds. It is also the only variant that fits the lesion better than the tank. AUC CBV rises by 0.018 over the tank (p = 6e−8). CBF, V and MTT move by only 1–2% relative to the plain PDE.
+- With the tissue-mean input (`full`), the PDE alone cuts the brain nRMSE from 0.069 to 0.050. The neural part adds nothing: the input is already blunt, so no split is needed, and the network learns not to split.
+- The PDE also changes the physics: MTT is 18–34% longer than with the tank (e.g. grey matter 2.9 s → 4.0 s), because a tank lets tracer leave instantly.
+
+![residuals](docs/figures/npde_residuals.png)
+
+![learned fields](docs/figures/npde_fields.png)
+
+In healthy tissue the network sends about 85% of the flow through a fast tube and keeps a slow tube for the tail; the transit-time CV (CTH/MTT) rises from 0.55 to 0.8–0.9. Whether the slow tube is true capillary heterogeneity or absorbs recirculation and AIF errors is not settled yet. Details, paired tests and limitations: [docs/NEURAL_PDE.md](docs/NEURAL_PDE.md) (in Vietnamese).
+
 ## Repository layout
 
 ```
@@ -140,6 +166,7 @@ preprocess/           # raw data -> HemoPIC-ready data
 hemopic_plus/         # library
   config.py  io.py  signal.py  models.py  fit.py  pipeline.py  evaluation.py  aif.py  osvd.py
   uq/                 # uncertainty: torch_model.py (differentiable model), data.py, laplace.py, mcmc.py
+  npde/               # transport.py (PDE tissue model, exact modal solver), neural.py (two-tube neural closure)
 scripts/
   run_cohort.py       # fits the whole cohort in parallel
   evaluate.py         # tracer nRMSE + lesion ROC AUC
@@ -155,6 +182,9 @@ scripts/
   eval_uq.py          # identifiability, interval widths, check 2 (removing uncertain voxels), tau claim
   run_ensemble.py     # pipeline uncertainty (k-means seeds and cluster numbers)
   make_uq_figures.py  # the uncertainty figures
+  run_pde.py          # refit every ROI with the transport PDE (and the polished tank) and evaluate
+  train_npde.py       # neural PDE with patient-level cross-validation
+  make_npde_figures.py  # the PDE / neural PDE figures
 tests/                # the baseline must match the original HemoPIC
 run_experiments.ps1 / .sh   # runs every experiment
 ```

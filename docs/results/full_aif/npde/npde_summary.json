@@ -1,0 +1,139 @@
+{
+  "pipeline": {
+    "nRMSE_GM": 0.11960546256602406,
+    "nRMSE_WM": 0.12305434130344002,
+    "nRMSE_lesion": 0.2709416405631823,
+    "nRMSE_c_lesion": 0.18201318018965817,
+    "nRMSE_full_brain": 0.11656523046004293,
+    "AUC_CBF": 0.7849350644561398,
+    "AUC_CBV": 0.5600690921478719,
+    "AUC_MTT": 0.7549530151942703
+  },
+  "tank_polished": {
+    "nRMSE_GM": 0.11921075976937537,
+    "nRMSE_WM": 0.12228829320718627,
+    "nRMSE_lesion": 0.2707968451467785,
+    "nRMSE_c_lesion": 0.18175216085088808,
+    "nRMSE_full_brain": 0.11604688349431581,
+    "AUC_CBF": 0.7868431625148564,
+    "AUC_CBV": 0.5504559066090396,
+    "AUC_MTT": 0.7550055964678315
+  },
+  "pde": {
+    "nRMSE_GM": 0.10952174116480685,
+    "nRMSE_WM": 0.11409969267519568,
+    "nRMSE_lesion": 0.27746297985087853,
+    "nRMSE_c_lesion": 0.17193013078687822,
+    "nRMSE_full_brain": 0.10794979240847764,
+    "AUC_CBF": 0.7834672948497641,
+    "AUC_CBV": 0.5627421059465262,
+    "AUC_MTT": 0.7630170429363068
+  },
+  "pdeadam": {
+    "nRMSE_GM": 0.10949518440728016,
+    "nRMSE_WM": 0.11411439067730898,
+    "nRMSE_lesion": 0.27747531897707534,
+    "nRMSE_c_lesion": 0.17192004725213542,
+    "nRMSE_full_brain": 0.10793906271764155,
+    "AUC_CBF": 0.78350128565095,
+    "AUC_CBV": 0.5627305631704127,
+    "AUC_MTT": 0.7630395158564081
+  },
+  "npde": {
+    "nRMSE_GM": 0.09964780022946877,
+    "nRMSE_WM": 0.1012919685376474,
+    "nRMSE_lesion": 0.2650837456764209,
+    "nRMSE_c_lesion": 0.16401211019432974,
+    "nRMSE_full_brain": 0.09428133758814826,
+    "AUC_CBF": 0.784332293089069,
+    "AUC_CBV": 0.5681286648563265,
+    "AUC_MTT": 0.7576469436211891
+  },
+  "roi": {
+    "n": 651,
+    "nmse_pde_median": 0.04452019110264499,
+    "nmse_npde_median": 0.027269324051763102,
+    "frac_npde_better": 0.6267281105990783,
+    "CBF_rel_change_median": 0.01257254355590609,
+    "V_rel_change_median": 0.007719715397032534,
+    "MTT_rel_change_median": 0.022495807326272432,
+    "tau_rel_change_median": 0.0620425668670026,
+    "cv_pde_median_GM": 0.5442656544479814,
+    "cv_npde_median_GM": 0.7669256267799118,
+    "cv_pde_median_WM": 0.5726371313635612,
+    "cv_npde_median_WM": 0.8809960519655716
+  },
+  "paired": {
+    "npde-pdeadam:roc_CBF": {
+      "mean_diff": 0.0008310074381191184,
+      "p_wilcoxon": 0.07472612576088977
+    },
+    "npde-pdeadam:roc_CBV": {
+      "mean_diff": 0.0053981016859136815,
+      "p_wilcoxon": 0.004060524599026394
+    },
+    "npde-pdeadam:roc_MTT": {
+      "mean_diff": -0.0053925722352189285,
+      "p_wilcoxon": 0.008959349050201126
+    },
+    "npde-pdeadam:tracer_GM": {
+      "mean_diff": -0.009847384177811409,
+      "p_wilcoxon": 2.2359058675647248e-06
+    },
+    "npde-pdeadam:tracer_WM": {
+      "mean_diff": -0.012822422139661565,
+      "p_wilcoxon": 4.482344138523331e-06
+    },
+    "npde-pdeadam:tracer_c_lesion": {
+      "mean_diff": -0.00790793705780567,
+      "p_wilcoxon": 4.956020165991504e-05
+    },
+    "npde-pdeadam:tracer_full_brain": {
+      "mean_diff": -0.01365772512949328,
+      "p_wilcoxon": 8.098822945612483e-09
+    },
+    "npde-pdeadam:tracer_lesion": {
+      "mean_diff": -0.012391573300654435,
+      "p_wilcoxon": 9.32687657950737e-06
+    },
+    "npde-tank_polished:roc_CBF": {
+      "mean_diff": -0.0025108694257873457,
+      "p_wilcoxon": 0.08761944016850975
+    },
+    "npde-tank_polished:roc_CBV": {
+      "mean_diff": 0.017672758247286743,
+      "p_wilcoxon": 6.043933353794273e-08
+    },
+    "npde-tank_polished:roc_MTT": {
+      "mean_diff": 0.0026413471533576747,
+      "p_wilcoxon": 0.54570677058814
+    },
+    "npde-tank_polished:tracer_GM": {
+      "mean_diff": -0.0195629595399066,
+      "p_wilcoxon": 1.2505552149377763e-11
+    },
+    "npde-tank_polished:tracer_WM": {
+      "mean_diff": -0.020996324669538876,
+      "p_wilcoxon": 2.000888343900442e-11
+    },
+    "npde-tank_polished:tracer_c_lesion": {
+      "mean_diff": -0.0177400506565583,
+      "p_wilcoxon": 1.7325874068774283e-10
+    },
+    "npde-tank_polished:tracer_full_brain": {
+      "mean_diff": -0.021765545906167562,
+      "p_wilcoxon": 6.821210263296962e-13
+    },
+    "npde-tank_polished:tracer_lesion": {
+      "mean_diff": -0.00571309947035761,
+      "p_wilcoxon": 0.17610102441426534
+    }
+  },
+  "settings": {
+    "folds": 5,
+    "steps": 1500,
+    "test_steps": 1000,
+    "cells": 24,
+    "shape_penalty": 0.001
+  }
+}

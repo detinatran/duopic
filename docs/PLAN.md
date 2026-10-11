@@ -72,6 +72,7 @@ Kết quả: xem `docs/RESULTS.md` (sinh bởi `scripts/compare.py`).
 ## 5. Bước tiếp theo (đề xuất)
 
 0. **Độ bất định**: đã làm xong (posterior từng ROI, bản đồ sd/CI theo voxel, ensemble pipeline, ba cách kiểm tra). Xem `docs/UNCERTAINTY.md`. Còn lại: nới khoảng cho MTT/τ, thêm bất định của AIF, và đưa bước đánh bóng L-BFGS-B vào `fit_roi_curve`.
+0b. **PDE và neural PDE**: đã làm xong (ống vận chuyển–khuếch tán thay bể trộn; mạng dùng chung dự đoán hai ống song song; kiểm tra chéo theo bệnh nhân). Xem `docs/NEURAL_PDE.md`. Còn lại: uncertainty cho neural PDE, sàn độ phân tán số, QC cho ROI fit hỏng, kiểm chứng ý nghĩa sinh lý của hai ống.
 1. **Kiểm định thống kê**: Wilcoxon theo cặp bệnh nhân (baseline so với full), kèm khoảng tin cậy bootstrap cho AUC.
 2. **Độ nhạy siêu tham số**: K_GM/K_WM ∈ {8, 16, 32}, λ_delay, cận của độ phân tán.
 3. **Chia ROI theo động học**: tách các ROI có phương sai thời gian đến (TTP) lớn, để lõi tổn thương không bị trộn với mô lành.

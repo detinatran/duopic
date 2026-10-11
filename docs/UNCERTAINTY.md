@@ -6,7 +6,7 @@ HemoPIC(+) chỉ cho ra **một** bộ tham số cho mỗi ROI, nên không bi�
 2. **Độ dao động do pipeline** (ensemble: đổi seed k-means và số cụm K);
 3. **Ba cách kiểm tra xem khoảng tin cậy có đúng không**, không cần dữ liệu giả riêng.
 
-Chạy trên 43 bệnh nhân ISLES 2017 (651 ROI) cho ba cấu hình `baseline` (HemoPIC gốc), `full` và `full_aif`. Chạy trên Windows (32 luồng, khoảng 25 phút mỗi cấu hình) và trên macOS cho ra kết quả trùng nhau.
+Chạy trên 43 bệnh nhân ISLES 2017 (651 ROI) cho ba cấu hình `baseline` (HemoPIC gốc), `full` và `full_aif`. Chạy trên Windows (RTX 4090, 32 luồng; 32 phút cho cả ba cấu hình, gồm fit lại, UQ, ba phép kiểm tra và ensemble) và trên macOS. Hai máy cho kết quả lệch nhau không quá 0.2 điểm phần trăm, do số ngẫu nhiên của MCMC khác nhau giữa hai hệ điều hành. Số liệu trong tài liệu này lấy từ lần chạy trên macOS.
 
 ## 1. Phương pháp
 
