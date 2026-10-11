@@ -18,7 +18,7 @@ An extension of [HemoPIC](https://github.com/jhuldr/HemoPIC) (MICCAI 2026), a ph
 
 **Important caveat** (docs/RESULTS.md, section 2d): a standard oSVD deconvolution that uses the same automatic AIF and the true TR reaches lesion ROC AUCs on par with HemoPIC+ for CBF and MTT, and higher for CBV. Any comparison should use it as the baseline (`scripts/osvd_check.py`).
 
-Rationale and design: [docs/PLAN.md](docs/PLAN.md). Full results: [docs/RESULTS.md](docs/RESULTS.md). Both documents are in Vietnamese.
+Rationale and design: [docs/PLAN.md](docs/PLAN.md). Full results: [docs/RESULTS.md](docs/RESULTS.md). Uncertainty: [docs/UNCERTAINTY.md](docs/UNCERTAINTY.md). These documents are in Vietnamese.
 
 ## Main results
 
@@ -59,6 +59,20 @@ Quality control of the automatic AIF on all 43 subjects: [docs/figures/aif_qc.pn
 
 To redraw the figures: `python scripts/make_figures.py --outputs outputs --data-root ../HemoPIC/data/ISLES2017_Training`. The first two figures only need `docs/results`.
 
+## Uncertainty
+
+Each ROI fit is turned into a posterior, p(θ | c) ∝ exp(−κ·L(θ)), with the HemoPIC objective L and one temperature κ per ROI set from the residual noise and the number of effectively independent frames. Its mode is the HemoPIC(+) fit itself, so nothing is refitted. The posterior is sampled with a Laplace approximation (exact Hessian from a differentiable PyTorch copy of the model) and batched MCMC. Voxel maps of the posterior sd and 95% interval are written next to the fitted maps. A pipeline ensemble (k-means seeds and cluster numbers) measures how much the maps move when the clustering changes. Details and all numbers: [docs/UNCERTAINTY.md](docs/UNCERTAINTY.md) (in Vietnamese).
+
+![What the data determines](docs/figures/uq_identifiability.png)
+
+- In the original HemoPIC, F and V are set by their priors (taken from the Deconv maps) in about 90% of ROIs. After the unit fix (C5) the data narrows them in more than 90% of ROIs, and the median 95% interval of CBF shrinks from 116% to 63% of its value.
+- The intervals are checked in three ways without a phantom: hiding blocks of time frames, removing the most uncertain voxels, and refitting curves with added noise of known truth. The intervals for CBF and CBV are reliable (95% intervals cover 97–100%). Those for MTT (86–88%) and τ (70–75%) are too narrow.
+- Removing the most uncertain voxels raises the lesion AUC for MTT in every config, and for CBF with `full` (0.782 → 0.802).
+
+![tau claim](docs/figures/uq_tau.png)
+
+The paper reports a shorter τ in the lesion than on the contralateral side. This holds for the original model (−4.2 s, 95% CI [−6.4, −2.1]), but reverses with high certainty once the units are fixed: +6.3 s, 95% CI [+3.7, +9.4].
+
 ## Repository layout
 
 ```
@@ -73,6 +87,7 @@ preprocess/           # raw data -> HemoPIC-ready data
   segmentation/             # SynthSeg + 4-class tissue labels (HemoPIC Preprocessing 1, needs FreeSurfer)
 hemopic_plus/         # library
   config.py  io.py  signal.py  models.py  fit.py  pipeline.py  evaluation.py  aif.py  osvd.py
+  uq/                 # uncertainty: torch_model.py (differentiable model), data.py, laplace.py, mcmc.py
 scripts/
   run_cohort.py       # fits the whole cohort in parallel
   evaluate.py         # tracer nRMSE + lesion ROC AUC
@@ -82,6 +97,12 @@ scripts/
   plot_aif.py         # QC of the automatic AIF (C6)
   osvd_check.py       # independent reference: oSVD with the same AIF (ROC, between-subject MTT)
   summarize_original_eval.py  # summarises CVT / tau from the original Eval scripts
+  run_uq.py           # posterior per ROI (Laplace + MCMC) and voxel uncertainty maps
+  eval_heldout.py     # check 1: predictive coverage of hidden time frames
+  eval_semisynth.py   # check 3: coverage of a known truth after adding noise and refitting
+  eval_uq.py          # identifiability, interval widths, check 2 (removing uncertain voxels), tau claim
+  run_ensemble.py     # pipeline uncertainty (k-means seeds and cluster numbers)
+  make_uq_figures.py  # the uncertainty figures
 tests/                # the baseline must match the original HemoPIC
 run_experiments.ps1 / .sh   # runs every experiment
 ```
@@ -100,6 +121,8 @@ python tests\test_baseline_equivalence.py      # should print: all tests passed
 ```
 
 Linux/macOS: the same, with `source .venv/bin/activate`.
+
+The uncertainty scripts also need PyTorch (CPU is enough): `pip install torch`, then `python tests/test_uq_torch.py`.
 
 ## Data
 

@@ -40,9 +40,11 @@ def fig_identifiability(out, cfgs):
     axes = np.atleast_1d(axes)
     for ax, cfg in zip(axes, cfgs):
         rows = rows_of(out, cfg)
-        names = [p for p in PARAMS if f"{p[0]}_post_sd" in rows[0]]
-        y = np.arange(len(names))[::-1]
-        for j, (p, lab) in enumerate(names):
+        y = np.arange(len(PARAMS))[::-1]               # fixed row per parameter so shared labels line up
+        for j, (p, lab) in enumerate(PARAMS):
+            if f"{p}_post_sd" not in rows[0]:
+                ax.text(0.5, y[j], "not in this model", ha="center", va="center", fontsize=7.5, color=INK2)
+                continue
             pinned = np.array([r[f"{p}_pinned"] == "True" for r in rows])
             ratio = np.array([float(r[f"{p}_post_sd"]) / max(float(r[f"{p}_prior_sd"]), 1e-30) for r in rows])
             fr = [np.mean(~pinned & (ratio < 0.5)), np.mean(~pinned & (ratio >= 0.5) & (ratio <= 0.9)),
@@ -54,7 +56,7 @@ def fig_identifiability(out, cfgs):
                     ax.text(left + v / 2, y[j], f"{v:.0%}", ha="center", va="center", fontsize=7.5,
                             color="#fcfcfb" if k == 0 else INK)
                 left += v
-        ax.set_yticks(y, [lab for _, lab in names])
+        ax.set_yticks(y, [lab for _, lab in PARAMS])
         ax.set_xlim(0, 1)
         ax.set_title(LABEL.get(cfg, cfg), loc="left", color=INK, fontsize=10)
         ax.grid(axis="y", visible=False)
@@ -113,7 +115,7 @@ def fig_calibration(out, cfgs):
 
 
 def fig_selective(out, cfgs):
-    fig, axes = plt.subplots(1, 2, figsize=(10, 3.6), sharey=False)
+    fig, axes = plt.subplots(1, 2, figsize=(10, 3.9), sharey=False)
     for ax, m in zip(axes, ("CBF", "MTT")):
         for i, cfg in enumerate(cfgs):
             f = out / cfg / "eval_uq" / "summary.json"
@@ -123,30 +125,43 @@ def fig_selective(out, cfgs):
             if not s:
                 continue
             fr = np.array(s["fractions"]) * 100
-            ax.plot(fr, s["auc_uncertain_removed"], "o-", color=C[i], lw=2, ms=5, label=f"{LABEL.get(cfg, cfg)}: most uncertain removed")
-            ax.plot(fr, s["auc_random_removed"], ":", color=C[i], lw=1.5, label=f"{LABEL.get(cfg, cfg)}: random removed")
+            ax.plot(fr, s["auc_uncertain_removed"], "o-", color=C[i], lw=2, ms=5)
+            ax.plot(fr, s["auc_random_removed"], ":", color=C[i], lw=1.5)
         ax.set_xlabel("% of voxels removed")
         ax.set_ylabel("lesion ROC AUC")
         ax.set_title(f"Check 2: {m}", loc="left", color=INK)
-    axes[0].legend(fontsize=7)
-    fig.tight_layout()
+    handles = [plt.Line2D([], [], color=C[i], lw=2) for i in range(len(cfgs))]
+    handles += [plt.Line2D([], [], color=INK2, lw=2, marker="o", ms=5), plt.Line2D([], [], color=INK2, lw=1.5, ls=":")]
+    fig.legend(handles, [LABEL.get(c, c) for c in cfgs] + ["most uncertain voxels removed", "random voxels removed"],
+               loc="lower center", ncol=len(cfgs) + 2, fontsize=8, frameon=False)
+    fig.tight_layout(rect=(0, 0.08, 1, 1))
     fig.savefig(FIG / "uq_selective.png", dpi=160)
     plt.close(fig)
 
 
 def fig_tau(out, cfgs):
-    fig, ax = plt.subplots(figsize=(7, 3.4))
-    for i, cfg in enumerate(cfgs):
+    fig, ax = plt.subplots(figsize=(7, 3.6))
+    data = {}
+    for cfg in cfgs:
         f = out / cfg / "eval_uq" / "tau_diff_draws.npy"
-        if not f.exists():
+        if f.exists():
+            s = json.loads((out / cfg / "eval_uq" / "summary.json").read_text(encoding="utf8"))["tau_lesion_minus_contra"]
+            data[cfg] = (np.load(f), s)
+    allv = np.concatenate([d for d, _ in data.values()])
+    bins = np.linspace(np.floor(allv.min()), np.ceil(allv.max()), 70)
+    top = 0
+    for i, cfg in enumerate(cfgs):
+        if cfg not in data:
             continue
-        d = np.load(f)
-        s = json.loads((out / cfg / "eval_uq" / "summary.json").read_text(encoding="utf8"))["tau_lesion_minus_contra"]
-        ax.hist(d, bins=40, color=C[i], alpha=0.55, label=f"{LABEL.get(cfg, cfg)}: 95% CI [{s['ci95'][0]:+.1f}, {s['ci95'][1]:+.1f}] s")
+        d, s = data[cfg]
+        h, *_ = ax.hist(d, bins=bins, color=C[i], alpha=0.6,
+                        label=f"{LABEL.get(cfg, cfg)}: 95% CI [{s['ci95'][0]:+.1f}, {s['ci95'][1]:+.1f}] s")
+        top = max(top, h.max())
+    ax.set_ylim(0, top * 1.45)
     ax.axvline(0, color=INK, lw=1)
     ax.set_xlabel("τ(lesion) − τ(contralateral), seconds   (< 0: lesion relaxes faster, the paper's claim)")
     ax.set_ylabel("posterior draws")
-    ax.legend(fontsize=8)
+    ax.legend(fontsize=8, loc="upper center", ncol=1, frameon=False)
     ax.set_title("The paper's τ claim with uncertainty", loc="left", color=INK)
     fig.tight_layout()
     fig.savefig(FIG / "uq_tau.png", dpi=160)
