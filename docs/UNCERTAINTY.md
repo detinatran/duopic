@@ -68,7 +68,13 @@ Trung vị của (độ rộng khoảng 95%) / (giá trị), tính trên 651 ROI
 | HemoPIC+ full | **63%** | **66%** | **69%** | 219% |
 | HemoPIC+ full_aif | 85% | 102% | 94% | 256% |
 
+![widths](figures/uq_widths.png)
+
 Sau khi sửa, khoảng CBF/CBV/MTT hẹp đi khoảng một nửa so với HemoPIC gốc. τ vẫn rất bất định ở mọi cấu hình.
+
+Ví dụ một ROI (bệnh nhân 22, ROI trùng tổn thương nhiều nhất và ROI trùng bên đối diện nhiều nhất): đường cong đo được, nghiệm mode và dải 95% của đường cong mô hình. Ô bên phải là mẫu posterior của (log F, log V) so với prior. Ở HemoPIC gốc, mẫu phủ kín vùng prior, tức dữ liệu không thêm thông tin. Ở HemoPIC+, dữ liệu kéo F, V ra khỏi prior. HemoPIC gốc dùng dt = 1 s nên trục thời gian ngắn hơn.
+
+![roi example](figures/uq_roi_example.png)
 
 Hội tụ của MCMC: R-hat > 1.1 ở 7.2% / 5.7% / 5.4% số ROI (lần lượt baseline / full / full_aif), ESS nhỏ nhất có trung vị 355–411. Các ROI chưa hội tụ phần lớn có τ hoặc delay nằm sát cận (posterior bị cắt ở biên).
 
@@ -161,4 +167,4 @@ python scripts/make_uq_figures.py --data-root <data>                 # docs/figu
 python tests/test_uq_torch.py                                        # bản torch khớp bản numpy
 ```
 
-Đầu ra nằm trong `outputs/<config>/training_XX/uq/`, `.../ens/` và `outputs/<config>/eval_uq/`.
+Đầu ra nằm trong `outputs/<config>/training_XX/uq/`, `.../ens/` và `outputs/<config>/eval_uq/`. Bản tóm tắt theo cohort (`summary.json`, `ensemble.json`, `heldout.csv.gz`, `semisynth.csv.gz`, `tau_diff_draws.npy`) được lưu trong `docs/results/<config>/uq/`.

@@ -218,6 +218,121 @@ def fig_maps(out, data_root, cfgs, pid=22):
     plt.close(fig)
 
 
+def fig_roi_example(out, data_root, cfgs, pid=22):
+    """Tracer curves of the most lesion-overlapping and the most contralateral ROI with
+    the 95% band of the fitted curve, and the posterior of (F, V) against the prior."""
+    import nibabel as nib
+    import torch
+    from hemopic_plus.uq import laplace as LP
+    from hemopic_plus.uq.data import load_subject
+    from hemopic_plus.uq.torch_model import DTYPE, simulate
+
+    ot = nib.load(str(Path(data_root) / f"training_{pid}" / "OT.nii")).get_fdata() > 0
+    flip = np.flip(ot, axis=0) & ~ot
+    fig, axes = plt.subplots(len(cfgs), 3, figsize=(12, 3.3 * len(cfgs)), squeeze=False,
+                             gridspec_kw={"width_ratios": [1.15, 1.15, 0.9]})
+    for i, cfg in enumerate(cfgs):
+        fd = out / cfg / f"training_{pid}"
+        b = load_subject(fd)
+        z = np.load(fd / "uq" / "posterior.npz")
+        with open(fd / "uq" / "roi_posterior.csv", encoding="utf8") as fh:
+            post = {int(r["roi_id"]): r for r in csv.DictReader(fh)}
+        lab = nib.load(str(fd / "roi_labels_seg4_within_kmeans.nii.gz")).get_fdata().astype(int)
+        rid_les = max(z["roi_ids"], key=lambda r: (ot & (lab == r)).sum())
+        rid_con = max(z["roi_ids"], key=lambda r: (flip & (lab == r)).sum())
+        t = b.t.numpy()
+        for j, (rid, name) in enumerate(((rid_les, "lesion ROI"), (rid_con, "contralateral ROI"))):
+            ax = axes[i, j]
+            k = int(np.where(b.roi_ids == rid)[0][0])
+            kz = int(np.where(z["roi_ids"] == rid)[0][0])
+            draws = torch.as_tensor(z["theta"][kz][::5], dtype=DTYPE)
+            sub = b.subset([k] * draws.shape[0])
+            with torch.no_grad():
+                _, cd = simulate(sub, draws)
+                _, cmap_ = simulate(b.subset([k]), torch.as_tensor(z["theta_map"][kz][None], dtype=DTYPE))
+            lo, hi = np.percentile(cd.numpy(), [2.5, 97.5], axis=0)
+            ax.fill_between(t, lo, hi, color=C[i], alpha=0.25, lw=0, label="95% band of the model curve")
+            ax.plot(t, b.c_obs[k].numpy(), "o", ms=2.5, color=INK2, label="measured (smoothed)")
+            ax.plot(t, cmap_[0].numpy(), color=C[i], lw=1.6, label="posterior mode")
+            r = post[int(rid)]
+            txt = "\n".join(f"{q} {float(r[f'{q}_mean']):.3g} [{float(r[f'{q}_lo']):.3g}, {float(r[f'{q}_hi']):.3g}]"
+                            for q in ("CBF", "V", "MTT", "tau"))
+            ax.text(0.98, 0.97, txt, transform=ax.transAxes, ha="right", va="top", fontsize=7, color=INK, family="monospace")
+            ax.set_title(f"{LABEL.get(cfg, cfg)}: {name} ({b.tissue[k]}, roi {rid})", loc="left", fontsize=9, color=INK)
+            ax.set_xlabel("time (s)")
+            if j == 0:
+                ax.set_ylabel("tracer concentration (a.u.)")
+                if i == 0:
+                    ax.legend(fontsize=7, loc="upper left", frameon=False)
+        # posterior of log F, log V of the lesion ROI against the prior
+        ax = axes[i, 2]
+        k = int(np.where(b.roi_ids == rid_les)[0][0])
+        kz = int(np.where(z["roi_ids"] == rid_les)[0][0])
+        kappa = torch.as_tensor([float(post[int(rid_les)]["kappa"])], dtype=DTYPE)
+        psd = LP.prior_sd(b.subset([k]), kappa)[0].numpy()
+        f0, v0 = float(b.log_f0[k]), float(b.log_v0[k])
+        th = z["theta"][kz]
+        ax.scatter(th[:, 3] - f0, th[:, 2] - v0, s=3, alpha=0.3, color=C[i], lw=0, label="posterior draws")
+        ang = np.linspace(0, 2 * np.pi, 200)
+        ax.plot(2 * psd[3] * np.cos(ang), 2 * psd[2] * np.sin(ang), color=INK2, lw=1, ls="--", label="prior, 2 sd")
+        ax.plot(0, 0, "+", color=INK, ms=8)
+        dx, dy = th[:, 3] - f0, th[:, 2] - v0
+        xs = np.concatenate([[-2 * psd[3], 2 * psd[3]], np.percentile(dx, [0.5, 99.5])])
+        ys = np.concatenate([[-2 * psd[2], 2 * psd[2]], np.percentile(dy, [0.5, 99.5])])
+        c, h = (xs.min() + xs.max()) / 2, 0.55 * max(np.ptp(xs), np.ptp(ys))
+        cy = (ys.min() + ys.max()) / 2
+        ax.set_xlim(c - h, c + h); ax.set_ylim(cy - h, cy + h); ax.set_aspect("equal", adjustable="box")
+        ax.set_xlabel("log F − prior centre")
+        ax.set_ylabel("log V − prior centre")
+        ax.set_title("lesion ROI: F and V vs their prior", loc="left", fontsize=9, color=INK)
+        ax.legend(fontsize=7, loc="upper right", frameon=True, facecolor="#fcfcfb", edgecolor="none", markerscale=3)
+    fig.suptitle(f"Posterior of single ROIs, training_{pid}", x=0.01, ha="left", color=INK)
+    fig.tight_layout()
+    fig.savefig(FIG / "uq_roi_example.png", dpi=150)
+    plt.close(fig)
+
+
+def fig_widths(out, cfgs):
+    """Median relative 95% width per quantity and tissue, and lesion vs contralateral voxels."""
+    fig, axes = plt.subplots(1, 2, figsize=(11, 3.6), gridspec_kw={"width_ratios": [1.6, 1]})
+    ax = axes[0]
+    qty = [("CBF", "CBF"), ("V", "CBV (V)"), ("MTT", "MTT"), ("tau", "τ")]
+    w = 0.26
+    for i, cfg in enumerate(cfgs):
+        s = json.loads((out / cfg / "eval_uq" / "summary.json").read_text(encoding="utf8"))["rel_width_95"]
+        x = np.arange(len(qty)) + (i - (len(cfgs) - 1) / 2) * w
+        ax.bar(x, [s[q]["all"] for q, _ in qty], w * 0.92, color=C[i], label=LABEL.get(cfg, cfg))
+        ax.plot(x, [s[q]["GM"] for q, _ in qty], "^", color=INK, ms=4)
+        ax.plot(x, [s[q]["WM"] for q, _ in qty], "v", color=INK2, ms=4)
+        for xx, (q, _) in zip(x, qty):
+            ax.text(xx, max(s[q]["all"], s[q]["GM"]) + 0.06, f"{s[q]['all']:.0%}", ha="center", fontsize=7, color=INK)
+    ax.plot([], [], "^", color=INK, ms=4, label="grey matter")
+    ax.plot([], [], "v", color=INK2, ms=4, label="white matter")
+    ax.set_xticks(range(len(qty)), [l for _, l in qty])
+    ax.set_ylabel("95% interval width / value (ROI median)")
+    ax.set_title("How wide are the intervals? (651 ROIs)", loc="left", color=INK)
+    ax.legend(fontsize=7, ncol=2, frameon=False, loc="upper left")
+    ax.set_ylim(0, 3.1)
+    ax = axes[1]
+    for i, cfg in enumerate(cfgs):
+        s = json.loads((out / cfg / "eval_uq" / "summary.json").read_text(encoding="utf8"))["selective"]
+        for j, m in enumerate(("CBF", "MTT")):
+            x = j + (i - (len(cfgs) - 1) / 2) * w
+            ax.plot([x, x], [s[m]["u_contra_median"], s[m]["u_lesion_median"]], color=C[i], lw=2)
+            ax.plot(x, s[m]["u_contra_median"], "o", color=C[i], mfc="#fcfcfb", ms=6)
+            ax.plot(x, s[m]["u_lesion_median"], "o", color=C[i], ms=6)
+    ax.plot([], [], "o", color=INK2, ms=6, label="lesion")
+    ax.plot([], [], "o", color=INK2, mfc="#fcfcfb", ms=6, label="contralateral")
+    ax.set_xticks([0, 1], ["CBF", "MTT"])
+    ax.set_xlim(-0.6, 1.6)
+    ax.set_ylabel("voxel 95% width / value (patient median)")
+    ax.set_title("Lesion vs contralateral voxels", loc="left", color=INK)
+    ax.legend(fontsize=7, frameon=False)
+    fig.tight_layout()
+    fig.savefig(FIG / "uq_widths.png", dpi=160)
+    plt.close(fig)
+
+
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--out-root", default=str(ROOT / "outputs"))
@@ -231,6 +346,8 @@ def main():
     fig_selective(out, a.configs)
     fig_tau(out, a.configs)
     fig_maps(out, a.data_root, [c for c in a.configs if c != "full_aif"])
+    fig_roi_example(out, a.data_root, [c for c in a.configs if c != "full_aif"])
+    fig_widths(out, a.configs)
     print("figures ->", FIG)
 
 

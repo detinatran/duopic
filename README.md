@@ -61,17 +61,69 @@ To redraw the figures: `python scripts/make_figures.py --outputs outputs --data-
 
 ## Uncertainty
 
-Each ROI fit is turned into a posterior, p(θ | c) ∝ exp(−κ·L(θ)), with the HemoPIC objective L and one temperature κ per ROI set from the residual noise and the number of effectively independent frames. Its mode is the HemoPIC(+) fit itself, so nothing is refitted. The posterior is sampled with a Laplace approximation (exact Hessian from a differentiable PyTorch copy of the model) and batched MCMC. Voxel maps of the posterior sd and 95% interval are written next to the fitted maps. A pipeline ensemble (k-means seeds and cluster numbers) measures how much the maps move when the clustering changes. Details and all numbers: [docs/UNCERTAINTY.md](docs/UNCERTAINTY.md) (in Vietnamese).
+Each ROI fit is turned into a posterior, p(θ | c) ∝ exp(−κ·L(θ)), with the HemoPIC objective L and one temperature κ per ROI set from the residual noise and the number of effectively independent frames. Its mode is the HemoPIC(+) fit itself, so nothing is refitted. The posterior is sampled with a Laplace approximation (exact Hessian from a differentiable PyTorch copy of the model) and batched MCMC (4 chains, R-hat and ESS reported). Voxel maps of the posterior sd and 95% interval are written next to the fitted maps. A pipeline ensemble (5 k-means seeds and 2 other cluster numbers) measures how much the maps move when the clustering changes. Details and all numbers: [docs/UNCERTAINTY.md](docs/UNCERTAINTY.md) (in Vietnamese).
+
+Data: 43 ISLES 2017 subjects, 651 ROIs, for the original HemoPIC (`baseline`), `full` and `full_aif`.
+
+### Which parameters does the data actually determine?
 
 ![What the data determines](docs/figures/uq_identifiability.png)
 
-- In the original HemoPIC, F and V are set by their priors (taken from the Deconv maps) in about 90% of ROIs. After the unit fix (C5) the data narrows them in more than 90% of ROIs, and the median 95% interval of CBF shrinks from 116% to 63% of its value.
-- The intervals are checked in three ways without a phantom: hiding blocks of time frames, removing the most uncertain voxels, and refitting curves with added noise of known truth. The intervals for CBF and CBV are reliable (95% intervals cover 97–100%). Those for MTT (86–88%) and τ (70–75%) are too narrow.
-- Removing the most uncertain voxels raises the lesion AUC for MTT in every config, and for CBF with `full` (0.782 → 0.802).
+Posterior sd divided by prior sd, per ROI parameter. In the original HemoPIC, F and V are set by their priors (taken from the Deconv maps) in about 90% of ROIs. After the unit fix (C5), the data narrows them in more than 90% of ROIs. R is not identifiable in any config. The dispersion parameter sits at its lower bound in 99% of ROIs, so the data does not use it. With the automatic AIF, the delay sits at its lower bound (−4 s) in 35% of ROIs.
+
+### One ROI in detail
+
+![ROI example](docs/figures/uq_roi_example.png)
+
+Left and middle: the measured curve, the posterior mode and the 95% band of the model curve for the ROI that overlaps the lesion most and the one that overlaps the contralateral side most (subject 22). The numbers are posterior means with 95% intervals. The original HemoPIC uses dt = 1 s, hence the shorter time axis. Right: posterior draws of (log F, log V) against the prior. In the original HemoPIC the posterior fills the prior; in HemoPIC+ the data moves F and V away from it.
+
+### How wide are the intervals?
+
+![Interval widths](docs/figures/uq_widths.png)
+
+The median 95% interval of CBF shrinks from 116% of its value (original) to 63% (`full`), and MTT from 185% to 69%. τ stays very uncertain (above 200%) in every config. In the original HemoPIC and in `full_aif`, the lesion is more uncertain than the contralateral side for CBF.
+
+### Can the intervals be trusted?
+
+![Calibration](docs/figures/uq_calibration.png)
+
+Two checks without a phantom. Check 1 hides one of 5 blocks of time frames, refits on the rest and asks how often the hidden values fall inside the predictive interval. Check 3 takes each fitted curve as the truth, adds noise with the same level and time correlation as the real residuals, refits with the pipeline's own estimator, and asks how often the 95% interval contains the truth (3 repeats × 651 ROIs).
+
+| 95% interval contains the truth | CBF | CBV (V) | MTT | τ |
+|---|---|---|---|---|
+| HemoPIC original | 98.4% | 98.7% | 97.9% | 72.6% |
+| HemoPIC+ full | 96.8% | 99.5% | 86.0% | 74.8% |
+| HemoPIC+ full_aif | 97.0% | 99.8% | 88.1% | 70.3% |
+
+The intervals for CBF and CBV are reliable. Those for MTT (in HemoPIC+) and τ are too narrow, by about 1.3× and 2×: their posteriors are often cut by a bound or have several modes. The predictive intervals of hidden frames are slightly too narrow at 95% (84–87%).
+
+### Does the uncertainty help lesion detection?
+
+![Selective prediction](docs/figures/uq_selective.png)
+
+Check 2 removes the q% voxels with the widest relative interval and recomputes the lesion ROC AUC; removing the same number of random voxels leaves the AUC unchanged. For MTT the AUC rises in every config. For CBF it rises only with `full` (0.782 → 0.802). In the original HemoPIC and `full_aif`, the most uncertain CBF voxels are the lesion itself (low flow, weak signal), so removing them lowers the AUC.
+
+### The paper's τ claim with uncertainty
 
 ![tau claim](docs/figures/uq_tau.png)
 
-The paper reports a shorter τ in the lesion than on the contralateral side. This holds for the original model (−4.2 s, 95% CI [−6.4, −2.1]), but reverses with high certainty once the units are fixed: +6.3 s, 95% CI [+3.7, +9.4].
+The paper reports a shorter τ in the lesion than on the contralateral side. This holds for the original model (−4.2 s, 95% CI [−6.4, −2.1]), but reverses with high certainty once the units are fixed: +6.3 s, 95% CI [+3.7, +9.4] (`full`) and +16.8 s, [+11.0, +22.9] (`full_aif`).
+
+### Uncertainty maps and pipeline uncertainty
+
+![Uncertainty maps](docs/figures/uq_maps_example.png)
+
+| | lesion AUC CBF over 7 ensemble members | voxel relative sd of CBF: pipeline / posterior |
+|---|---|---|
+| HemoPIC original | 0.757–0.765 | 2.5% / 27.9% |
+| HemoPIC+ full | 0.776–0.783 | 7.1% / 15.3% |
+| HemoPIC+ full_aif | 0.779–0.787 | 7.7% / 18.2% |
+
+Changing the k-means seed or the number of clusters moves the AUC by at most 0.008, less than the gain from the original to `full` (+0.020). In HemoPIC+, the pipeline uncertainty is about half the model uncertainty, so it is not negligible.
+
+A side finding: polishing the Powell solution with L-BFGS-B changes the CBF level of an ROI by more than 5% in 8–22% of ROIs, so the pipeline's optimiser often stops before the minimum.
+
+To reproduce (after `run_cohort.py`): `run_uq.py`, `eval_heldout.py`, `eval_semisynth.py`, `eval_uq.py`, `run_ensemble.py`, then `make_uq_figures.py`; see [docs/UNCERTAINTY.md](docs/UNCERTAINTY.md). The cohort summaries are in `docs/results/<config>/uq/`.
 
 ## Repository layout
 
