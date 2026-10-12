@@ -1,0 +1,135 @@
+{
+  "n_patients": 36,
+  "auc": {
+    "oSVD CBF alone": {
+      "auc": 0.7824356462220253,
+      "n": 36
+    },
+    "oSVD CBV alone": {
+      "auc": 0.6227857818557292,
+      "n": 36
+    },
+    "oSVD MTT alone": {
+      "auc": 0.759251205326016,
+      "n": 36
+    },
+    "oSVD TTP alone": {
+      "auc": 0.7957153098926781,
+      "n": 36
+    },
+    "DuoPIC CBF alone": {
+      "auc": 0.806576632669323,
+      "n": 36
+    },
+    "DuoPIC CBV alone": {
+      "auc": 0.6232351876760823,
+      "n": 36
+    },
+    "DuoPIC MTT alone": {
+      "auc": 0.7450625010108265,
+      "n": 36
+    },
+    "DuoPIC TTP alone": {
+      "auc": 0.7957153098926781,
+      "n": 36
+    },
+    "oSVD | maps | logreg": {
+      "auc": 0.8088429493825933,
+      "n": 36
+    },
+    "oSVD | maps | mlp": {
+      "auc": 0.8113660003886056,
+      "n": 36
+    },
+    "oSVD | maps+timing | logreg": {
+      "auc": 0.8201301914074045,
+      "n": 36
+    },
+    "oSVD | maps+timing | mlp": {
+      "auc": 0.8552938688574694,
+      "n": 36
+    },
+    "oSVD | maps+timing+asym | logreg": {
+      "auc": 0.8326667622431361,
+      "n": 36
+    },
+    "oSVD | maps+timing+asym | mlp": {
+      "auc": 0.8773012281473284,
+      "n": 36
+    },
+    "DuoPIC | maps | logreg": {
+      "auc": 0.8155982300423789,
+      "n": 36
+    },
+    "DuoPIC | maps | mlp": {
+      "auc": 0.8305175382475896,
+      "n": 36
+    },
+    "DuoPIC | maps+timing | logreg": {
+      "auc": 0.8247367321127987,
+      "n": 36
+    },
+    "DuoPIC | maps+timing | mlp": {
+      "auc": 0.8656258309957852,
+      "n": 36
+    },
+    "DuoPIC | maps+timing+asym | logreg": {
+      "auc": 0.8308022045158479,
+      "n": 36
+    },
+    "DuoPIC | maps+timing+asym | mlp": {
+      "auc": 0.885955490826804,
+      "n": 36
+    },
+    "DuoPIC | maps+timing+asym+uncertainty | logreg": {
+      "auc": 0.8211167810694804,
+      "n": 36
+    },
+    "DuoPIC | maps+timing+asym+uncertainty | mlp": {
+      "auc": 0.8789975818067037,
+      "n": 36
+    }
+  },
+  "paired": {
+    "DuoPIC - oSVD | maps | logreg": {
+      "diff": 0.0067552806597855775,
+      "p": 0.181412478297716
+    },
+    "DuoPIC - oSVD | maps+timing | logreg": {
+      "diff": 0.0046065407053942665,
+      "p": 0.1762826904305257
+    },
+    "DuoPIC - oSVD | maps+timing+asym | logreg": {
+      "diff": -0.001864557727288126,
+      "p": 0.9073552150803152
+    },
+    "DuoPIC +uncertainty - without | logreg": {
+      "diff": -0.009685423446367553,
+      "p": 9.956923895515501e-05
+    },
+    "DuoPIC best combo - DuoPIC CBF alone | logreg": {
+      "diff": 0.014540148400157394,
+      "p": 0.004123038903344423
+    },
+    "DuoPIC - oSVD | maps | mlp": {
+      "diff": 0.01915153785898399,
+      "p": 0.0004440157790668309
+    },
+    "DuoPIC - oSVD | maps+timing | mlp": {
+      "diff": 0.010331962138315918,
+      "p": 4.721074947156012e-05
+    },
+    "DuoPIC - oSVD | maps+timing+asym | mlp": {
+      "diff": 0.008654262679475408,
+      "p": 0.00018572056433185935
+    },
+    "DuoPIC +uncertainty - without | mlp": {
+      "diff": -0.0069579090201003346,
+      "p": 3.049665247090161e-05
+    },
+    "DuoPIC best combo - DuoPIC CBF alone | mlp": {
+      "diff": 0.07242094913738072,
+      "p": 5.922629497945309e-08
+    }
+  }
+}

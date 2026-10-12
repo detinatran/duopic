@@ -302,3 +302,36 @@ Lưu ý khi chạy: máy van dùng chung với người khác. Một lượt b�
 - CTH của neural PDE 0.63–0.68.
 
 Delay theo ROI quá thô (khoảng 15 ROI mỗi bệnh nhân), nên thông tin "thuốc đến muộn" chỉ có ích khi tính ở mức voxel.
+
+## 2h. Chia ROI mịn hơn (A)
+
+`scripts/partition_scan.py`, số liệu: `docs/results/partition_scan/`. Câu hỏi: tăng số ROI có làm bản đồ tốt hơn không? Với mỗi phần ngoài của kiểm tra chéo lồng nhau ở 2g, lấy cấu hình Optuna tốt nhất của phần đó, rồi chỉ đổi số cụm: K_GM ∈ {16, 32, 64} × K_WM ∈ {6, 12, 24}, cộng thêm số cụm Optuna đã chọn. Mỗi điểm chạy trên cả 43 bệnh nhân. Điểm nào tốt nhất trên 2 phần kia thì được dùng để chấm phần còn lại, nên kết quả gộp vẫn là kết quả trên bệnh nhân giữ riêng.
+
+- AUC trung bình (43 bn, chỉ để mô tả) chỉ dao động 0.721–0.731 trên toàn lưới. Tăng số cụm làm AUC **giảm nhẹ**: ví dụ phần 2, K_GM 16 → 64 (K_WM 6): 0.725 → 0.721.
+- Điểm được chọn: phần 0 là K_GM 16, K_WM 12 (Optuna chọn 12/6); phần 1 và 2 giữ đúng lựa chọn của Optuna (7/4 và 10/12).
+- Trên 36 bn có oSVD, giữ riêng: CBF 0.817, CBV 0.613, MTT 0.780, trung bình 0.737. Bằng kết quả Optuna lồng nhau (chênh −0.0002, p = 0.94). So với oSVD: trung bình +0.015 (p = 0.001), CBF +0.035 (p = 4e−8), MTT +0.021 (p = 0.04), CBV −0.010 (p = 0.76).
+
+**Kết luận:** chia ROI mịn hơn không giúp. Độ chi tiết của bản đồ đến từ texture voxel, không đến từ số ROI. Giữ lựa chọn của Optuna (7–16 cụm chất xám).
+
+## 2i. Điểm tổn thương đa tham số (B)
+
+`scripts/lesion_score.py`, số liệu: `docs/results/lesion_score/`. Mỗi bản đồ đơn lẻ được chấm bằng AUC. Ở đây một bộ phân loại (hồi quy logistic, và một MLP nhỏ) kết hợp nhiều đặc trưng của từng voxel, kiểm tra chéo 5 phần theo bệnh nhân. Cùng một cách làm cho oSVD (cùng AIF) và cho mô hình (`full_aif_idvox_osvd_nc`, cấu hình làm tay, không tune trên nhãn tổn thương), trên cùng 36 bn. Đặc trưng: log của CBF, CBV, MTT so với trung vị não (maps); TTP so với trung vị (timing); chênh với voxel đối xứng qua đường giữa (asym); độ rộng tương đối của khoảng 95% của CBF và MTT (uncertainty, chỉ có ở mô hình).
+
+| đặc trưng | oSVD, logistic | oSVD, MLP | mô hình, logistic | mô hình, MLP |
+|---|---|---|---|---|
+| CBF đơn lẻ (tham chiếu) | 0.782 | | 0.807 | |
+| maps | 0.809 | 0.811 | 0.816 | 0.831 |
+| maps + timing | 0.820 | 0.855 | 0.825 | 0.866 |
+| maps + timing + asym | 0.833 | 0.877 | 0.831 | **0.886** |
+| + uncertainty | – | – | 0.821 | 0.879 |
+
+Kiểm định cặp (Wilcoxon, 36 bn):
+- mô hình − oSVD, MLP: maps +0.019 (p = 4e−4), + timing +0.010 (p = 5e−5), + asym +0.009 (p = 2e−4);
+- mô hình − oSVD, logistic: +0.007 (p = 0.18), +0.005 (p = 0.18), −0.002 (p = 0.91);
+- thêm uncertainty: −0.010 (p = 1e−4) với logistic, −0.007 (p = 3e−5) với MLP;
+- bộ đầy đủ (kể cả uncertainty, MLP) − CBF đơn lẻ: +0.072 (p = 6e−8).
+
+**Kết luận:**
+- Kết hợp bản đồ, thời gian và bất đối xứng tăng AUC nhiều hơn hẳn việc tune mô hình: 0.807 → 0.886.
+- Với MLP, bản đồ của mô hình vẫn hơn oSVD một chút nhưng có ý nghĩa ở mọi bộ đặc trưng. Với logistic thì hai bên ngang nhau.
+- Độ bất định không giúp phát hiện tổn thương (giảm nhẹ). Nó dùng để biết voxel nào đáng tin, không phải một dấu hiệu của tổn thương.
