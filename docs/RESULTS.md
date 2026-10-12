@@ -335,3 +335,13 @@ Kiểm định cặp (Wilcoxon, 36 bn):
 - Kết hợp bản đồ, thời gian và bất đối xứng tăng AUC nhiều hơn hẳn việc tune mô hình: 0.807 → 0.886.
 - Với MLP, bản đồ của mô hình vẫn hơn oSVD một chút nhưng có ý nghĩa ở mọi bộ đặc trưng. Với logistic thì hai bên ngang nhau.
 - Độ bất định không giúp phát hiện tổn thương (giảm nhẹ). Nó dùng để biết voxel nào đáng tin, không phải một dấu hiệu của tổn thương.
+
+## 2j. Mô hình ở mức voxel (DuoPIC-vox)
+
+Chi tiết: `docs/NEURAL_PDE.md` mục 7, số liệu: `docs/results/vox_pde/`. Mỗi voxel được fit 3 tham số (biên độ, MTT, độ trễ), phần còn lại lấy từ fit của ROI chứa nó.
+
+- MTT ở mức voxel là bản đồ MTT tốt nhất từ trước tới giờ: AUC 0.801 (compartment) so với oSVD 0.759 (+0.042, p = 0.002) và ROI × texture 0.766.
+- CBV từ biên độ kém (≈ 0.50). Bản đồ độ trễ (0.763) hơn Tmax của oSVD (0.693) nhưng kém TTP thô (0.796).
+- **DuoPIC-vox** = CBV pha loãng chỉ thị + MTT ở mức voxel + CBF = 60 CBV / MTT. Trên 36 bn: CBF 0.810, CBV 0.623, MTT 0.801, trung bình **0.745**, so với oSVD 0.721 (+0.023, p = 0.001), cấu hình làm tay 0.725 (+0.020, p = 3e−4) và Optuna lồng nhau 0.737 (+0.008, p = 0.12). Không tune gì theo nhãn tổn thương.
+- Ở mức voxel, neural PDE khớp đường cong tốt hơn compartment (nMSE −5%) nhưng AUC không tốt hơn.
+- Độ nhạy theo prior (×0.1, ×1, ×10): MTT voxel 0.775 / 0.801 / 0.781, luôn không thua oSVD; mức ×1 được chọn trước khi chạy.

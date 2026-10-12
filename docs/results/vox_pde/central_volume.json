@@ -1,0 +1,147 @@
+{
+  "n": 36,
+  "mean": {
+    "DuoPIC-vox tank CBF": 0.8103311136560383,
+    "DuoPIC-vox tank CBV": 0.6232351875689323,
+    "DuoPIC-vox tank MTT": 0.8010419048175614,
+    "DuoPIC-vox npde CBF": 0.7894335606901861,
+    "DuoPIC-vox npde CBV": 0.6232351875689323,
+    "DuoPIC-vox npde MTT": 0.793463848085083,
+    "oSVD CBF": 0.7824356462942184,
+    "oSVD CBV": 0.6227857818541176,
+    "oSVD MTT": 0.759251205508519,
+    "hand-made CBF": 0.8065766326141202,
+    "hand-made CBV": 0.6232351875689323,
+    "hand-made MTT": 0.7450625009731972,
+    "nested Optuna CBF": 0.8183551148899846,
+    "nested Optuna CBV": 0.6127730074041469,
+    "nested Optuna MTT": 0.7796529376585161,
+    "oSVD mean": 0.7214908778856183,
+    "hand-made mean": 0.7249581070520831,
+    "nested Optuna mean": 0.7369270199842158,
+    "DuoPIC-vox tank mean": 0.7448694020141773,
+    "DuoPIC-vox npde mean": 0.7353775321147339
+  },
+  "paired": {
+    "DuoPIC-vox tank - oSVD CBF": {
+      "diff": 0.027895467361819765,
+      "p": 0.0024800077080726624,
+      "n": 36
+    },
+    "DuoPIC-vox tank - oSVD CBV": {
+      "diff": 0.00044940571481454544,
+      "p": 0.1919942139647901,
+      "n": 36
+    },
+    "DuoPIC-vox tank - oSVD MTT": {
+      "diff": 0.041790699309042556,
+      "p": 0.001737168204272166,
+      "n": 36
+    },
+    "DuoPIC-vox tank - oSVD mean": {
+      "diff": 0.023378524128558967,
+      "p": 0.0011259853781666607,
+      "n": 36
+    },
+    "DuoPIC-vox tank - hand-made CBF": {
+      "diff": 0.0037544810419181487,
+      "p": 0.3877139012911357,
+      "n": 36
+    },
+    "DuoPIC-vox tank - hand-made CBV": {
+      "diff": 0.0,
+      "p": 1.0,
+      "n": 36
+    },
+    "DuoPIC-vox tank - hand-made MTT": {
+      "diff": 0.05597940384436433,
+      "p": 5.541951395571232e-07,
+      "n": 36
+    },
+    "DuoPIC-vox tank - hand-made mean": {
+      "diff": 0.019911294962094164,
+      "p": 0.00025036028819158673,
+      "n": 36
+    },
+    "DuoPIC-vox tank - nested Optuna CBF": {
+      "diff": -0.008024001233946473,
+      "p": 0.560126525873784,
+      "n": 36
+    },
+    "DuoPIC-vox tank - nested Optuna CBV": {
+      "diff": 0.010462180164785395,
+      "p": 0.0987409489608765,
+      "n": 36
+    },
+    "DuoPIC-vox tank - nested Optuna MTT": {
+      "diff": 0.021388967159045254,
+      "p": 0.09779572318075225,
+      "n": 36
+    },
+    "DuoPIC-vox tank - nested Optuna mean": {
+      "diff": 0.007942382029961401,
+      "p": 0.11515166956814937,
+      "n": 36
+    },
+    "DuoPIC-vox npde - oSVD CBF": {
+      "diff": 0.0069979143959677925,
+      "p": 0.18664936278946698,
+      "n": 36
+    },
+    "DuoPIC-vox npde - oSVD CBV": {
+      "diff": 0.00044940571481454544,
+      "p": 0.1919942139647901,
+      "n": 36
+    },
+    "DuoPIC-vox npde - oSVD MTT": {
+      "diff": 0.03421264257656415,
+      "p": 0.007377402711426839,
+      "n": 36
+    },
+    "DuoPIC-vox npde - oSVD mean": {
+      "diff": 0.013886654229115482,
+      "p": 0.03626942803384736,
+      "n": 36
+    },
+    "DuoPIC-vox npde - hand-made CBF": {
+      "diff": -0.01714307192393382,
+      "p": 0.14770023614983074,
+      "n": 36
+    },
+    "DuoPIC-vox npde - hand-made CBV": {
+      "diff": 0.0,
+      "p": 1.0,
+      "n": 36
+    },
+    "DuoPIC-vox npde - hand-made MTT": {
+      "diff": 0.048401347111885935,
+      "p": 2.3269385565072298e-05,
+      "n": 36
+    },
+    "DuoPIC-vox npde - hand-made mean": {
+      "diff": 0.01041942506265068,
+      "p": 0.05156775642535649,
+      "n": 36
+    },
+    "DuoPIC-vox npde - nested Optuna CBF": {
+      "diff": -0.02892155419979844,
+      "p": 0.005119445180753246,
+      "n": 36
+    },
+    "DuoPIC-vox npde - nested Optuna CBV": {
+      "diff": 0.010462180164785395,
+      "p": 0.0987409489608765,
+      "n": 36
+    },
+    "DuoPIC-vox npde - nested Optuna MTT": {
+      "diff": 0.013810910426566854,
+      "p": 0.36241441484889947,
+      "n": 36
+    },
+    "DuoPIC-vox npde - nested Optuna mean": {
+      "diff": -0.0015494878694820857,
+      "p": 0.80990211723838,
+      "n": 36
+    }
+  }
+}

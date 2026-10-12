@@ -224,7 +224,69 @@ Bản đồ ví dụ (bệnh nhân 22, hàng trên HemoPIC+ full_aif, hàng dư�
 - Check 3 sinh dữ liệu từ chính mô hình được kiểm tra (cho cả hai mô hình), nên nó đo độ tin cậy *khi mô hình đúng*. Check 1 (dữ liệu thật) gần như không đổi: phần sai lệch chưa được mô hình hoá vẫn làm khoảng 95% chỉ phủ 85–86%.
 - Mạng được giữ cố định trong posterior; bất định của mạng chỉ đo bằng 4 mạng bootstrap mỗi fold.
 
-## 7. Cách chạy
+## 7. Mô hình ở mức voxel (DuoPIC-vox)
+
+**Ý tưởng.** Bản đồ ở mục 4 vẫn là "mức ROI × texture": mô hình chỉ cho một giá trị cho mỗi ROI (khoảng 15 ROI mỗi bệnh nhân), còn chi tiết trong ROI do texture đo được quyết định. Ở đây mô hình được fit cho từng voxel (khoảng 230 nghìn voxel mỗi bệnh nhân). Code: `hemopic_plus/npde/voxel.py`, `scripts/run_voxel_pde.py`.
+
+- Giữ từ fit ROI những gì một đường cong voxel nhiễu không xác định được: Windkessel (R, τ, và F, quyết định q(t)), độ phân tán đầu vào, Pe và cách chia hai ống của closure (bản neural PDE). Bản compartment dùng fit ROI của HemoPIC+.
+- Mỗi voxel có 3 tham số, đúng ba thứ mà một đường cong xác định được:
+  - biên độ Cin: diện tích của C bằng Cin nhân diện tích của (F/q) c_in, nên Cin cho CBV kiểu pha loãng chỉ thị;
+  - V (với F của ROI): quyết định tốc độ k = q/(60V), tức MTT;
+  - độ trễ.
+
+  Prior bậc hai kéo về giá trị của ROI: λ = 0.02 cho log V và log Cin, 0.002/s² cho độ trễ (bằng prior độ trễ của fit ROI). Bản đồ: MTT_v = 60 V_v / CBF_ROI, CBV_v = CBV_ROI · Cin_v / Cin_ROI, CBF_v = 60 CBV_v / MTT_v.
+- Tối ưu: Levenberg–Marquardt theo lô (3 tham số, Jacobian sai phân), độ trễ khởi đầu bằng lưới 1 s. Mode riêng của một ống chỉ phụ thuộc Pe, nên chỉ tính một lần cho mỗi ROI. Mất 7–35 phút mỗi bệnh nhân trên một luồng CPU (cả hai bản).
+- Kiểm tra (`tests/test_voxel.py`): một voxel ở đúng tham số ROI cho lại đường cong ROI (sai số < 1e-8). Với đường cong giả có nhiễu 2%, CBF/CBV/MTT sai trung vị 2%, độ trễ khoảng 0.05 s. Thiết kế đầu tiên (F và V tự do, Cin cố định) không tách được F với V, vì chỉ tỉ số F/V quyết định dáng đường cong; bài thử này phát hiện ra nên đã đổi trước khi chạy.
+
+![voxel maps](figures/vox_maps_example.png)
+
+**Bản đồ của chính mô hình voxel** (AUC tổn thương, 36 bn có oSVD; `docs/results/vox_pde/summary.json`):
+
+| | CBF | CBV | MTT | độ trễ |
+|---|---|---|---|---|
+| voxel, compartment | 0.774 | 0.498 | **0.801** | 0.763 |
+| voxel, neural PDE | 0.760 | 0.522 | 0.794 | 0.759 |
+| ROI × texture, compartment (full_aif) | 0.790 | 0.552 | 0.766 | – |
+| ROI × texture, neural PDE | 0.788 | 0.561 | 0.768 | – |
+| oSVD cùng AIF | 0.782 | 0.623 | 0.759 | Tmax 0.693 |
+| TTP thô của voxel | | | | 0.796 |
+
+- **MTT ở mức voxel tốt hơn hẳn**: hơn oSVD +0.042 (p = 0.002) và hơn ROI × texture +0.034 (p = 9e−4). Đây là bản đồ MTT tốt nhất từ trước tới giờ.
+- **CBV từ biên độ kém** (≈ 0.50). Một giải thích có thể (chưa kiểm chứng): mô hình ngoại suy cả phần đuôi nằm ngoài cửa sổ 56 s, nên ước lượng gần CBV thật, mà CBV thật trong vùng nhồi máu sau cùng thường còn giữ (tuần hoàn bàng hệ). CBV pha loãng chỉ thị cắt ở 56 s thì thấp ở chỗ thuốc đến muộn, nên lại phân biệt tổn thương tốt hơn.
+- **Bản đồ độ trễ**: hơn Tmax của oSVD +0.07 (p = 0.007) nhưng kém TTP thô (−0.027, p = 0.014).
+- **Neural PDE so với compartment ở mức voxel**: khớp đường cong tốt hơn (nMSE trung vị 0.069 so với 0.073, p = 7e−4) nhưng AUC không tốt hơn (CBF −0.012, CBV +0.021, MTT −0.007).
+
+**DuoPIC-vox** (`scripts/eval_voxel_maps.py`). Ghép CBV pha loãng chỉ thị ([C8], như cấu hình làm tay), MTT ở mức voxel và CBF = 60 CBV / MTT (định lý thể tích trung tâm). Không tune siêu tham số nào theo nhãn tổn thương.
+
+| 36 bn | CBF | CBV | MTT | trung bình |
+|---|---|---|---|---|
+| oSVD cùng AIF | 0.782 | 0.623 | 0.759 | 0.721 |
+| ROI × texture, làm tay | 0.807 | 0.623 | 0.745 | 0.725 |
+| ROI × texture, Optuna lồng nhau | **0.818** | 0.613 | 0.780 | 0.737 |
+| DuoPIC-vox, neural PDE | 0.789 | 0.623 | 0.793 | 0.735 |
+| **DuoPIC-vox, compartment** | 0.810 | 0.623 | **0.801** | **0.745** |
+
+- So với oSVD: trung bình **+0.023 (p = 0.001)**; CBF +0.028 (p = 0.003), MTT +0.042 (p = 0.002), CBV ngang.
+- So với cấu hình làm tay: +0.020 (p = 3e−4), chủ yếu nhờ MTT (+0.056, p = 6e−7).
+- So với Optuna lồng nhau: +0.008 (p = 0.12), tức ngang nhau, dù DuoPIC-vox không tune gì theo nhãn.
+- Lưu ý: cách ghép này được chọn sau khi đã thấy CBV từ biên độ kém, nên không hoàn toàn "chọn trước". Phần tăng chính (MTT ở mức voxel) thì không phụ thuộc vào lựa chọn đó.
+
+![voxel AUC](figures/vox_auc.png)
+
+**Độ nhạy theo prior** (`--prior-scale`, nhân cả ba λ; `docs/results/vox_pde/prior_*`; AUC trên 36 bn):
+
+| độ mạnh prior | ×0.1 | ×1 (chọn trước) | ×10 |
+|---|---|---|---|
+| MTT voxel, compartment | 0.775 | **0.801** | 0.781 |
+| MTT voxel, neural PDE | 0.767 | 0.794 | 0.776 |
+| độ trễ voxel, compartment | 0.739 | 0.763 | **0.792** |
+| CBV từ biên độ, compartment | 0.483 | 0.498 | 0.552 |
+
+- Mức ×1 được chọn trước khi chạy, và cho MTT tốt nhất trong ba mức. Prior yếu thì bản đồ nhiễu hơn; prior mạnh thì MTT bị kéo về mức ROI. Trên cả khoảng prior rộng gấp 100 lần, MTT voxel vẫn không thua oSVD (0.759).
+- Bản đồ độ trễ thì càng được kéo về ROI càng tốt: ở ×10 nó ngang TTP thô (0.792 so với 0.796) và hơn Tmax của oSVD +0.099 (p = 2e−6).
+- Không chọn mức prior theo các kết quả này (sẽ là tune trên nhãn); bảng chỉ để mô tả độ ổn định.
+
+## 8. Cách chạy
 
 ```bash
 python tests/test_npde.py                                   # PDE chứa HemoPIC+, bảo toàn khối lượng, MTT
@@ -238,8 +300,14 @@ python scripts/run_npde_uq.py configs/full_aif.yaml --workers 30             # p
 python scripts/eval_uq.py configs/full_aif.yaml --name full_aif__npde        # độ rộng, Check 2, τ
 python scripts/make_uq_figures.py --configs full full__npde full_aif full_aif__npde \
        --map-configs full_aif full_aif__npde --prefix uq_npde_               # docs/figures/uq_npde_*.png
+# mô hình ở mức voxel
+python tests/test_voxel.py
+python scripts/run_voxel_pde.py configs/full_aif.yaml --workers 10           # bản đồ voxel + AUC từng bệnh nhân
+python scripts/run_voxel_pde.py configs/full_aif.yaml --prior-scale 0.1 --no-save   # độ nhạy theo prior
+python scripts/eval_voxel_maps.py configs/full_aif.yaml                     # DuoPIC-vox (định lý thể tích trung tâm)
+python scripts/make_voxel_figures.py                                        # docs/figures/vox_*.png
 ```
 
-Số liệu tổng hợp: `docs/results/<config>/npde/` (PDE, neural PDE) và `docs/results/<config>/npde/uq/` (uncertainty).
+Số liệu tổng hợp: `docs/results/<config>/npde/` (PDE, neural PDE), `docs/results/<config>/npde/uq/` (uncertainty) và `docs/results/vox_pde/` (mức voxel).
 
-Đầu ra: `outputs/<config>__polish/`, `__pde/`, `__pdeadam/`, `__npde/`. Mỗi thư mục là một bộ fit đầy đủ (đường cong, bản đồ CBF/CBV/MTT), chấm điểm bằng đúng `evaluate_subject` như các cấu hình khác. Bản đồ của PDE và neural PDE là bản đồ đã fit được nhân lại theo từng ROI với mức CBF và V mới, giống cách làm trong `run_uq.py`.
+Đầu ra: `outputs/<config>__polish/`, `__pde/`, `__pdeadam/`, `__npde/`. Mỗi thư mục là một bộ fit đầy đủ (đường cong, bản đồ CBF/CBV/MTT), chấm điểm bằng đúng `evaluate_subject` như các cấu hình khác. Bản đồ của PDE và neural PDE là bản đồ đã fit được nhân lại theo từng ROI với mức CBF và V mới, giống cách làm trong `run_uq.py`. Bản đồ ở mức voxel nằm ở `outputs/<config>__vox_tank/` và `__vox_npde/` (`VOX_CBF`, `VOX_CBV`, `VOX_MTT`, `VOX_delay`, `VOX_nmse`).
