@@ -277,3 +277,28 @@ AIF tự động chỉ được thử 9 lần (tốt nhất 0.725), PDE 2 lần 
 - Trên tập kiểm tra, cấu hình đã tune **không thua oSVD ở bản đồ nào**: CBF hơn có ý nghĩa, CBV ngang, MTT nhỉnh hơn nhưng chưa có ý nghĩa. Nhưng tập kiểm tra nhỏ (14 bn, chỉ 10 bn có oSVD), nên cần xác nhận trên dữ liệu khác (ví dụ ISLES 2018) hoặc bằng kiểm tra chéo lồng nhau.
 - CBV với `id_voxel` không phụ thuộc mô hình (AUC 0.624 ở mọi cấu hình dùng nó). CBV vẫn kém oSVD trên tập kiểm tra (0.624 so với 0.648 trên 10 bn có AIF; chênh trên cùng 10 bn ≈ 0).
 - Mô hình mô (bể, PDE hay neural PDE) hầu như không ảnh hưởng AUC ở cấu hình này. Nó chỉ cải thiện độ khớp đường cong.
+
+**Kiểm tra chéo lồng nhau** (`--outer-folds 3`, 60 trial mỗi phần; `scripts/pool_nested.py`; số liệu: `docs/results/optuna_cv/`). Mỗi bệnh nhân được chấm bằng một cấu hình tune trên 2 phần còn lại, nên cả 43 bệnh nhân đều là tập kiểm tra một lần.
+
+| AUC trên 36 bn có oSVD | CBF | CBV | MTT | trung bình |
+|---|---|---|---|---|
+| full_aif (mặc định) | 0.790 | 0.552 | 0.766 | 0.703 |
+| full_aif_idvox_osvd_nc (tốt nhất làm tay) | 0.807 | 0.623 | 0.745 | 0.725 |
+| **tuned (lồng nhau)** | **0.818** | 0.613 | **0.780** | **0.737** |
+| oSVD + AIF tự động | 0.782 | 0.623 | 0.759 | 0.722 |
+
+- tuned − oSVD: CBF **+0.036 (p = 3e−8)**, CBV −0.010 (p = 0.76), MTT +0.020 (p = 0.05), trung bình **+0.015 (p = 9e−4)**;
+- tuned − tốt nhất làm tay: trung bình +0.011 (p = 8e−5), MTT +0.032 (p = 2e−7), CBF +0.010 (p = 0.03), CBV −0.009 (p = 0.14);
+- tuned − full_aif (43 bn): trung bình +0.028 (p = 2e−5).
+
+Cả 3 phần đều chọn phân bố CBF theo oSVD không kẹp, prior F yếu (λ_F ≈ 0.005) và mô hình bể. 2 trên 3 phần chọn đường trung bình của mô làm đầu vào. Số cụm và độ làm trơn khác nhau giữa các phần, nên cấu hình tối ưu chưa ổn định ở các tham số này.
+
+Lưu ý khi chạy: máy van dùng chung với người khác. Một lượt bị dừng vì hết bộ nhớ, và các trial bị ảnh hưởng không được tính. Script hiện chạy lại bệnh nhân lỗi và loại trial thiếu bệnh nhân.
+
+**Bản đồ thời gian** (`scripts/timing_maps.py`, số liệu: `docs/results/timing/`). AUC tổn thương trên 43 bn:
+- TTP từng voxel 0.781;
+- Tmax theo oSVD 0.693 (36 bn);
+- delay của mô hình theo ROI 0.66–0.69, delay + chênh TTP 0.70–0.71;
+- CTH của neural PDE 0.63–0.68.
+
+Delay theo ROI quá thô (khoảng 15 ROI mỗi bệnh nhân), nên thông tin "thuốc đến muộn" chỉ có ích khi tính ở mức voxel.

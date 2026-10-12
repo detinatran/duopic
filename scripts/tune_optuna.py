@@ -10,6 +10,10 @@ trials, the default configs and oSVD (patients with an accepted AIF) are
 evaluated on the test patients, with paired Wilcoxon tests.
 
 Writes <out_root>/optuna/{split.json, study.db, trials.csv, test.json, test_per_patient.csv}.
+
+Nested cross-validation: --outer-folds K --outer-fold k uses fold k of a K-fold
+split of the patients (seed 0) as the test set and writes to
+<out_root>/optuna_cv/fold<k>/. Run k = 0..K-1, then scripts/pool_nested.py.
 """
 import argparse
 import csv
@@ -113,14 +117,24 @@ def run_one(args):
     return pid, {"auc": auc, "nrmse": nrmse}, None
 
 
-def run_set(ex, cfg, tissue, pids, out_dir):
+def run_set(ex, cfg, tissue, pids, out_dir, retries=2):
+    """Run every patient in parallel; patients that fail (e.g. out of memory on a
+    shared machine) are retried one at a time in this process."""
     out_dir.mkdir(parents=True, exist_ok=True)
-    res = {}
+    res, failed = {}, []
     for pid, r, err in ex.map(run_one, [(cfg, tissue, pid, out_dir) for pid in pids]):
         if err:
-            print(f"    patient {pid} failed: {err}", flush=True)
+            failed.append(pid)
         else:
             res[pid] = r
+    for pid in failed:
+        for attempt in range(retries):
+            _, r, err = run_one((cfg, tissue, pid, out_dir))
+            if not err:
+                res[pid] = r
+                break
+        else:
+            print(f"    patient {pid} failed after {retries} retries: {err}", flush=True)
     return res
 
 
@@ -145,16 +159,23 @@ def main():
     p.add_argument("--test-frac", type=float, default=1 / 3)
     p.add_argument("--top", type=int, default=3, help="best trials evaluated on the test set")
     p.add_argument("--patients", type=int, nargs="*", help="restrict the cohort (smoke tests)")
+    p.add_argument("--outer-folds", type=int, default=0, help="nested CV: number of outer folds (0 = one split)")
+    p.add_argument("--outer-fold", type=int, default=0, help="nested CV: which outer fold is the test set")
     a = p.parse_args()
     base = load_config(a.config, {k: v for k, v in (("data_root", a.data_root), ("out_root", a.out_root)) if v})
     out = base.resolve("out_root")
-    od = out / "optuna"
+    od = out / "optuna" if not a.outer_folds else out / "optuna_cv" / f"fold{a.outer_fold}"
     od.mkdir(parents=True, exist_ok=True)
     pids = sorted(a.patients or list_patients(base.resolve("data_root")))
     rng = np.random.default_rng(0)
     perm = list(rng.permutation(pids))
-    n_test = int(round(a.test_frac * len(pids)))
-    test, tune = sorted(int(x) for x in perm[:n_test]), sorted(int(x) for x in perm[n_test:])
+    if a.outer_folds:
+        fold = {int(x): i % a.outer_folds for i, x in enumerate(perm)}
+        test = sorted(x for x in fold if fold[x] == a.outer_fold)
+        tune = sorted(x for x in fold if fold[x] != a.outer_fold)
+    else:
+        n_test = int(round(a.test_frac * len(pids)))
+        test, tune = sorted(int(x) for x in perm[:n_test]), sorted(int(x) for x in perm[n_test:])
     (od / "split.json").write_text(json.dumps({"tune": tune, "test": test}, indent=2), encoding="utf8")
     print(f"tuning on {len(tune)} patients, {len(test)} held out for the test", flush=True)
 
@@ -180,8 +201,8 @@ def main():
         tdir = od / "trials" / f"t{trial.number:03d}"
         res = run_set(ex, cfg, tissue, tune, tdir)
         shutil.rmtree(tdir, ignore_errors=True)
-        if len(res) < 0.9 * len(tune):
-            raise optuna.TrialPruned(f"only {len(res)} patients ran")
+        if len(res) < len(tune):                      # every patient must run, or the trial is not comparable
+            raise optuna.TrialPruned(f"only {len(res)} of {len(tune)} patients ran")
         s = summary(res)
         for k, v in s.items():
             trial.set_user_attr(k, v)

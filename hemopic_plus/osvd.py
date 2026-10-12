@@ -33,32 +33,40 @@ def _oscillation(k):
 
 
 def osvd_maps(curves, aif, dt, k_h=0.73, rho=1.04, osc_target=0.095,
-              thresholds=(0.005, 0.01, 0.02, 0.03, 0.05, 0.075, 0.1, 0.15, 0.2, 0.3, 0.5), chunk=20000):
+              thresholds=(0.005, 0.01, 0.02, 0.03, 0.05, 0.075, 0.1, 0.15, 0.2, 0.3, 0.5), chunk=20000, return_tmax=False):
     """curves: (n_vox, T) baseline-subtracted concentration; aif: (T,).
-    Returns cbf, cbv, mtt arrays of shape (n_vox,)."""
+    Returns cbf, cbv, mtt arrays of shape (n_vox,), and Tmax (time of the
+    residue maximum, seconds) when return_tmax is set."""
     n_vox, T = curves.shape
     U, S, Vt = _circulant_svd(aif, dt)
     smax = float(S.max())
     scale = 100.0 * k_h / rho
     auc_a = max(float(np.sum(aif) * dt), 1e-12)
     cbf = np.full(n_vox, np.nan)
+    tmax = np.full(n_vox, np.nan)
     for s0 in range(0, n_vox, chunk):
         c = curves[s0:s0 + chunk]
         cpad = np.concatenate([c, np.zeros_like(c)], axis=1).T  # (2T, n)
         UTc = U.T @ cpad  # (2T, n)
         chosen = np.full(c.shape[0], np.nan)
+        arg = np.full(c.shape[0], np.nan)
         for thr in thresholds:  # increasing truncation until the residue is smooth
             inv = np.where(S >= thr * smax, 1.0 / S, 0.0)
             k = (Vt.T @ (inv[:, None] * UTc)).T  # (n, 2T)
             ok = np.isnan(chosen) & (_oscillation(k) <= osc_target)
             chosen[ok] = np.max(k[ok], axis=1)
+            arg[ok] = np.argmax(k[ok][:, :T], axis=1)
         if np.any(np.isnan(chosen)):  # never smooth enough: strongest truncation
             inv = np.where(S >= thresholds[-1] * smax, 1.0 / S, 0.0)
             k = (Vt.T @ (inv[:, None] * UTc)).T
             rest = np.isnan(chosen)
             chosen[rest] = np.max(k[rest], axis=1)
+            arg[rest] = np.argmax(k[rest][:, :T], axis=1)
         cbf[s0:s0 + chunk] = scale * 60.0 * chosen
+        tmax[s0:s0 + chunk] = arg * dt
     cbv = scale * np.sum(curves, axis=1) * dt / auc_a
     with np.errstate(divide="ignore", invalid="ignore"):
         mtt = np.where(cbf > 0, 60.0 * cbv / cbf, np.nan)
+    if return_tmax:
+        return cbf, cbv, mtt, tmax
     return cbf, cbv, mtt
