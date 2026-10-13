@@ -3,13 +3,14 @@
 
 python scripts/make_hemopic_comparison.py [--data-root ...] [--out-root outputs] [--patient 22]
 
-Left: CBF, CBV and MTT relative to the brain median for HemoPIC (the original
+CBF, CBV and MTT relative to the brain median for HemoPIC (the original
 pipeline, outputs/baseline) and DuoPIC-vox (indicator-dilution CBV, voxel MTT,
 CBF = 60 CBV / MTT), with the final infarct and each map's lesion AUC for this
-patient. Right: lesion AUC of every patient with oSVD maps, HemoPIC on x and
-DuoPIC-vox on y (above the diagonal: DuoPIC-vox better). Scored like
-compare_osvd.py. Sized for the full text width of the paper (7 in).
-Writes docs/figures/hemopic_vs_duopic.png and docs/results/vox_pde/hemopic_vs_duopic.json.
+patient (full text width of the paper, 7 in). Second figure: lesion AUC of
+every patient with oSVD maps, HemoPIC on x and DuoPIC-vox on y, one panel per
+map (above the diagonal: DuoPIC-vox better; one column, 3.35 in). Scored like
+compare_osvd.py.
+Writes docs/figures/hemopic_vs_duopic_{maps,auc}.png and docs/results/vox_pde/hemopic_vs_duopic.json.
 """
 import argparse
 import csv
@@ -97,8 +98,10 @@ def main():
     o2 = ot[:, :, z][crop].T.astype(float)
     groups = [("HemoPIC [4]", hemopic(out, sub), hem[a.patient]), ("DuoPIC-vox", duopic_vox(out, sub), vox[a.patient])]
 
-    fig = plt.figure(figsize=(7.0, 1.3))
-    gs = fig.add_gridspec(1, 9, width_ratios=[1, 1, 1, 0.3, 1, 1, 1, 0.42, 1.6], wspace=0.05, left=0.005, right=0.99, bottom=0.21, top=0.76)
+    # figure 1: maps (full text width)
+    fig = plt.figure(figsize=(7.0, 1.22))
+    gs = fig.add_gridspec(1, 9, width_ratios=[1, 1, 1, 0.35, 1, 1, 1, 0.12, 0.08], wspace=0.05,
+                          left=0.01, right=0.955, bottom=0.13, top=0.79)
     cm = plt.get_cmap("Blues").copy()
     cm.set_bad("white")
     im = None
@@ -120,28 +123,35 @@ def main():
         fig.canvas.draw()
         x0, x1 = axs[0].get_position().x0, axs[-1].get_position().x1
         fig.text(0.5 * (x0 + x1), 0.995, gname, ha="center", va="top", fontsize=7.5, fontweight="bold", color=INK)
-    gap = fig.add_subplot(gs[0, 3])
-    pos = gap.get_position()
-    gap.remove()
-    cax = fig.add_axes([pos.x0 + 0.35 * pos.width, pos.y0 + 0.15 * pos.height, 0.25 * pos.width, 0.7 * pos.height])
+    cax = fig.add_subplot(gs[0, 8])
+    pos = cax.get_position()
+    cax.set_position([pos.x0, pos.y0 + 0.15 * pos.height, pos.width, 0.7 * pos.height])
     cb = fig.colorbar(im, cax=cax, ticks=[0, 1, 2])
     cb.ax.tick_params(labelsize=5.5, length=1.5, pad=1)
     cb.outline.set_linewidth(0.4)
-    ax = fig.add_subplot(gs[0, 8])
-    ax.plot([0.3, 1.0], [0.3, 1.0], color=INK2, lw=0.6, ls="--")
+    cb.set_label("/ brain median", fontsize=5.5, labelpad=2)
+    fig.savefig(FIG / "hemopic_vs_duopic_maps.png", dpi=400)
+    plt.close(fig)
+
+    # figure 2: lesion AUC of every patient (one column)
+    fig, axes = plt.subplots(1, 3, figsize=(3.35, 1.3), sharex=True, sharey=True)
     for k, (m, _) in enumerate(MAPS):
-        ax.scatter([hem[p][m] for p in vox], [vox[p][m] for p in vox], s=5, color=C[k], lw=0, alpha=0.85, label=m)
-    ax.set_xlim(0.3, 1.0); ax.set_ylim(0.3, 1.0)
-    ax.set_aspect("equal")
-    ax.set_xticks([0.4, 0.6, 0.8, 1.0]); ax.set_yticks([0.4, 0.6, 0.8, 1.0])
-    ax.set_xlabel("AUC, HemoPIC", labelpad=1)
-    ax.set_ylabel("AUC, DuoPIC-vox", labelpad=1)
-    ax.tick_params(length=2, pad=1)
-    ax.legend(loc="lower right", handletextpad=0.05, borderaxespad=0.15, labelspacing=0.1, markerscale=1.6, frameon=False)
-    fig.savefig(FIG / "hemopic_vs_duopic.png", dpi=400)
+        ax = axes[k]
+        ax.plot([0.3, 1.0], [0.3, 1.0], color=INK2, lw=0.6, ls="--")
+        ax.scatter([hem[p][m] for p in vox], [vox[p][m] for p in vox], s=6, color=C[k], lw=0, alpha=0.9)
+        ax.set_xlim(0.3, 1.0); ax.set_ylim(0.3, 1.0)
+        ax.set_aspect("equal")
+        ax.set_xticks([0.4, 0.6, 0.8, 1.0]); ax.set_yticks([0.4, 0.6, 0.8, 1.0])
+        ax.tick_params(length=2, pad=1)
+        ax.set_title(m, pad=2, color=INK)
+        ax.text(0.04, 0.96, f"{stats[m]['n_better']}/{stats['n']} above", transform=ax.transAxes, ha="left", va="top", fontsize=6, color=INK2)
+    axes[0].set_ylabel("AUC, DuoPIC-vox", labelpad=1)
+    axes[1].set_xlabel("AUC, HemoPIC", labelpad=1)
+    fig.subplots_adjust(left=0.12, right=0.965, bottom=0.2, top=0.88, wspace=0.14)
+    fig.savefig(FIG / "hemopic_vs_duopic_auc.png", dpi=400)
     plt.close(fig)
     print(json.dumps(stats, indent=1))
-    print("figure ->", FIG / "hemopic_vs_duopic.png")
+    print("figures ->", FIG / "hemopic_vs_duopic_maps.png", FIG / "hemopic_vs_duopic_auc.png")
 
 
 if __name__ == "__main__":

@@ -275,7 +275,9 @@ Bản đồ ví dụ (bệnh nhân 22, hàng trên HemoPIC+ full_aif, hàng dư�
 
 **So với HemoPIC gốc** (`scripts/make_hemopic_comparison.py`, số liệu `docs/results/vox_pde/hemopic_vs_duopic.json`, 36 bn): DuoPIC-vox hơn HemoPIC ở CBF +0.038 (p = 1e−4), CBV +0.031 (p = 5e−4), MTT +0.079 (p = 5e−4). Tính theo từng bệnh nhân, DuoPIC-vox tốt hơn ở 29/36 (CBF), 27/36 (CBV), 27/36 (MTT) bệnh nhân, và ở 31/36 bệnh nhân với AUC trung bình ba bản đồ (+0.049, p = 7e−7).
 
-![HemoPIC vs DuoPIC-vox](figures/hemopic_vs_duopic.png)
+![HemoPIC vs DuoPIC-vox, maps](figures/hemopic_vs_duopic_maps.png)
+
+![HemoPIC vs DuoPIC-vox, AUC per patient](figures/hemopic_vs_duopic_auc.png)
 
 **Độ nhạy theo prior** (`--prior-scale`, nhân cả ba λ; `docs/results/vox_pde/prior_*`; AUC trên 36 bn):
 
@@ -310,7 +312,7 @@ python scripts/run_voxel_pde.py configs/full_aif.yaml --workers 10           # b
 python scripts/run_voxel_pde.py configs/full_aif.yaml --prior-scale 0.1 --no-save   # độ nhạy theo prior
 python scripts/eval_voxel_maps.py configs/full_aif.yaml                     # DuoPIC-vox (định lý thể tích trung tâm)
 python scripts/make_voxel_figures.py                                        # docs/figures/vox_*.png
-python scripts/make_hemopic_comparison.py                                   # docs/figures/hemopic_vs_duopic.png (HemoPIC gốc so với DuoPIC-vox)
+python scripts/make_hemopic_comparison.py                                   # docs/figures/hemopic_vs_duopic_{maps,auc}.png (HemoPIC gốc so với DuoPIC-vox)
 ```
 
 Số liệu tổng hợp: `docs/results/<config>/npde/` (PDE, neural PDE), `docs/results/<config>/npde/uq/` (uncertainty) và `docs/results/vox_pde/` (mức voxel).
