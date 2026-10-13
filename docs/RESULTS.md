@@ -345,3 +345,4 @@ Chi tiết: `docs/NEURAL_PDE.md` mục 7, số liệu: `docs/results/vox_pde/`. 
 - **DuoPIC-vox** = CBV pha loãng chỉ thị + MTT ở mức voxel + CBF = 60 CBV / MTT. Trên 36 bn: CBF 0.810, CBV 0.623, MTT 0.801, trung bình **0.745**, so với oSVD 0.721 (+0.023, p = 0.001), cấu hình làm tay 0.725 (+0.020, p = 3e−4) và Optuna lồng nhau 0.737 (+0.008, p = 0.12). Không tune gì theo nhãn tổn thương.
 - Ở mức voxel, neural PDE khớp đường cong tốt hơn compartment (nMSE −5%) nhưng AUC không tốt hơn.
 - Độ nhạy theo prior (×0.1, ×1, ×10): MTT voxel 0.775 / 0.801 / 0.781, luôn không thua oSVD; mức ×1 được chọn trước khi chạy.
+- So với HemoPIC gốc: DuoPIC-vox hơn ở CBF +0.038, CBV +0.031, MTT +0.079 (cả ba p < 0.001); AUC trung bình tốt hơn ở 31/36 bệnh nhân (`docs/figures/hemopic_vs_duopic.png`).

@@ -170,7 +170,7 @@ def fig_tau(out, cfgs):
     plt.close(fig)
 
 
-def fig_maps(out, data_root, cfgs, pid=22):
+def fig_maps(out, data_root, cfgs, pid=22, show_title=True):
     import nibabel as nib
 
     def load(p):
@@ -203,7 +203,7 @@ def fig_maps(out, data_root, cfgs, pid=22):
                 img = np.where(ok, sd / v, np.nan)
                 vmax, cmap = 0.5, "Oranges"
             cm = plt.get_cmap(cmap).copy()
-            cm.set_bad("#fcfcfb")
+            cm.set_bad(plt.rcParams["axes.facecolor"])
             im = ax.imshow(img[:, :, z][crop].T, origin="lower", cmap=cm, vmin=0, vmax=vmax, interpolation="nearest")
             ax.contour(ot[:, :, z][crop].T, levels=[0.5], colors=[INK], linewidths=0.8, origin="lower")
             ax.set_xticks([]); ax.set_yticks([]); ax.grid(False)
@@ -214,10 +214,68 @@ def fig_maps(out, data_root, cfgs, pid=22):
             if j == 0:
                 ax.set_ylabel(LABEL.get(cfg, cfg), fontsize=9, color=INK)
             fig.colorbar(im, ax=ax, fraction=0.04, pad=0.02)
-    fig.suptitle(f"Uncertainty maps, training_{pid} slice {z} (black contour = lesion)", x=0.01, ha="left", color=INK)
+    if show_title:
+        fig.suptitle(f"Uncertainty maps, training_{pid} slice {z} (black contour = lesion)", x=0.01, ha="left", color=INK)
     fig.tight_layout()
     fig.savefig(FIG / f"{PREFIX}maps_example.png", dpi=150)
     plt.close(fig)
+
+
+def fig_maps_column(out, data_root, cfgs, pid=22, width=3.35):
+    """Same panels as fig_maps, laid out for one column of a two-column paper:
+    no title, white background, one shared colour bar under each column."""
+    import nibabel as nib
+
+    def load(p):
+        return nib.as_closest_canonical(nib.load(str(p))).get_fdata()
+
+    base = Path(data_root) / f"training_{pid}"
+    seg = load(base / "hemopic_seg4" / "seg4_label_ref24.nii.gz") > 0
+    ot = load(base / "OT.nii") > 0
+    z = int(np.argmax(ot.sum(axis=(0, 1))))
+    xs, ys = np.where(seg[:, :, z])
+    crop = (slice(xs.min() - 3, xs.max() + 4), slice(ys.min() - 3, ys.max() + 4))
+    ens = "ensemble sd" if any("__npde" in c for c in cfgs) else "pipeline sd"
+    cols = [("CBF", "CBF", None, 2.5, "Blues"), ("CBF", "CBF 95% width", "uq", 1.5, "Oranges"),
+            ("CBF", f"CBF {ens}", "ens", 0.5, "Oranges"), ("MTT", "MTT 95% width", "uq", 1.5, "Oranges")]
+    rc = {"figure.facecolor": "white", "axes.facecolor": "white", "savefig.facecolor": "white", "font.size": 6}
+    with plt.rc_context(rc):
+        fig = plt.figure(figsize=(width, 0.53 * width + 0.25))
+        gs = fig.add_gridspec(len(cfgs) + 1, len(cols), height_ratios=[1] * len(cfgs) + [0.07],
+                              left=0.06, right=0.995, top=0.94, bottom=0.07, wspace=0.04, hspace=0.06)
+        for j, (m, title, kind, vmax, cmap) in enumerate(cols):
+            im = None
+            for i, cfg in enumerate(cfgs):
+                fd = out / cfg / f"training_{pid}"
+                v = load(fd / f"HemoPIC_{m}.nii.gz")
+                ok = seg & np.isfinite(v) & (v > 0)
+                if kind is None:
+                    img = np.where(ok, v / np.median(v[ok]), np.nan)
+                elif kind == "uq":
+                    lo, hi = load(fd / "uq" / f"HemoPIC_{m}_lo.nii.gz"), load(fd / "uq" / f"HemoPIC_{m}_hi.nii.gz")
+                    img = np.where(ok, (hi - lo) / v, np.nan)
+                else:
+                    img = np.where(ok, load(fd / "ens" / f"HemoPIC_{m}_ens_sd.nii.gz") / v, np.nan)
+                cm = plt.get_cmap(cmap).copy()
+                cm.set_bad("white")
+                ax = fig.add_subplot(gs[i, j])
+                im = ax.imshow(img[:, :, z][crop].T, origin="lower", cmap=cm, vmin=0, vmax=vmax, interpolation="nearest")
+                ax.contour(ot[:, :, z][crop].T, levels=[0.5], colors=[INK], linewidths=0.5, origin="lower")
+                ax.set_xticks([]); ax.set_yticks([]); ax.grid(False)
+                for sp in ax.spines.values():
+                    sp.set_visible(False)
+                if i == 0:
+                    ax.set_title(title, fontsize=6, pad=2, color=INK)
+                if j == 0:
+                    ax.set_ylabel(LABEL.get(cfg, cfg), fontsize=6, labelpad=1, color=INK)
+            cax = fig.add_subplot(gs[len(cfgs), j])
+            pos = cax.get_position()
+            cax.set_position([pos.x0 + 0.12 * pos.width, pos.y0, 0.76 * pos.width, pos.height])
+            cb = fig.colorbar(im, cax=cax, orientation="horizontal", ticks=[0, vmax / 2, vmax])
+            cb.ax.tick_params(labelsize=5, length=1.5, pad=1)
+            cb.outline.set_linewidth(0.4)
+        fig.savefig(FIG / f"{PREFIX}maps_column.png", dpi=400)
+        plt.close(fig)
 
 
 def fig_roi_example(out, data_root, cfgs, pid=22):
