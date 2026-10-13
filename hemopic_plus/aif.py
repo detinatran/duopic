@@ -18,6 +18,12 @@ Arterial voxels at DSC resolution suffer partial volume, which scales the AIF
 down. The VOF (superior sagittal sinus: large, late, high-AUC voxels) is less
 affected, so the AIF is rescaled by AUC(VOF) / AUC(AIF) when that ratio
 exceeds 1 (`aif_pve: vof`).
+
+Uncertainty ensemble (scripts/run_aif_ensemble.py): `aif_member > 0` bootstraps
+the selected arterial voxels and multiplies the PVE scale by a log-normal factor
+(sd `aif_pve_jitter`), both seeded by the member; `aif_cluster_rank: 1` keeps
+the second earliest shape cluster in the first clustering round. The defaults
+(member 0, rank 0) give the AIF unchanged.
 """
 import numpy as np
 
@@ -29,15 +35,16 @@ def _first_moment(d, t):
     return np.sum(d * t[None, :], axis=1) / np.maximum(s, 1e-12)
 
 
-def _shape_cluster_earliest(curves, t, seed, k=5):
-    """Cluster AUC-normalised shapes, return mask of the earliest-moment cluster."""
+def _shape_cluster_earliest(curves, t, seed, k=5, rank=0):
+    """Cluster AUC-normalised shapes, return mask of the earliest-moment cluster
+    (rank 1: the second earliest, used by the AIF uncertainty ensemble)."""
     if curves.shape[0] <= k:
         return np.ones(curves.shape[0], bool)
     shapes = curves / np.maximum(np.sum(curves, axis=1, keepdims=True), 1e-12)
     lab, _ = kmeans_numpy(shapes.astype(np.float32), k=k, seed=seed, max_iter=50)
     m1 = _first_moment(curves, t)
-    best = min((j for j in range(k) if np.any(lab == j)), key=lambda j: float(np.median(m1[lab == j])))
-    return lab == best
+    order = sorted((j for j in range(k) if np.any(lab == j)), key=lambda j: float(np.median(m1[lab == j])))
+    return lab == order[min(int(rank), len(order) - 1)]
 
 
 def _bolus_quality(raw, d, bf, tail_max):
@@ -75,13 +82,15 @@ def select_aif(ctc, mask3, t, cfg, seed=0):
         return None
 
     for rnd in range(2):
-        keep = _shape_cluster_earliest(d[idx], t, seed + rnd)
+        keep = _shape_cluster_earliest(d[idx], t, seed + rnd, rank=int(cfg.aif_cluster_rank) if rnd == 0 else 0)
         if np.sum(keep) < 3:
             break
         idx = idx[keep]
     idx = idx[np.argsort(-peak[idx])][: int(cfg.aif_max_voxels)]
+    rng = np.random.default_rng(1000003 * int(cfg.aif_member) + int(seed)) if int(cfg.aif_member) > 0 else None
+    sel = rng.choice(idx, idx.size, replace=True) if rng is not None else idx
 
-    aif = smooth_curve_gaussian(raw[idx].mean(axis=0), cfg.aif_smooth_sigma, cfg.baseline_frames, True)
+    aif = smooth_curve_gaussian(raw[sel].mean(axis=0), cfg.aif_smooth_sigma, cfg.baseline_frames, True)
     aif_d = positive_excursion(aif[None, :], cfg.baseline_frames)[0]
     aif_ttp = int(np.argmax(aif_d))
 
@@ -105,6 +114,8 @@ def select_aif(ctc, mask3, t, cfg, seed=0):
         if cfg.aif_pve == "vof":
             ratio = float(np.sum(positive_excursion(vof[None, :], bf)) / max(np.sum(aif_d), 1e-12))
             scale = float(np.clip(ratio, 1.0, float(cfg.aif_pve_max)))
+            if rng is not None:
+                scale = float(np.clip(scale * np.exp(rng.normal(0.0, float(cfg.aif_pve_jitter))), 1.0, float(cfg.aif_pve_max)))
     aif_scaled = aif * scale
 
     return {

@@ -76,6 +76,9 @@ class Config:
     aif_smooth_sigma: float = 0.8
     aif_pve: str = "vof"
     aif_pve_max: float = 5.0
+    aif_member: int = 0
+    aif_pve_jitter: float = 0.15
+    aif_cluster_rank: int = 0
     prior_scale: str = "wm_reference"
     k_h: float = 0.73
     rho_brain: float = 1.04

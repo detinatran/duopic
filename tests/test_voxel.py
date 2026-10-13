@@ -5,7 +5,10 @@
      synthetic voxel curves with 2% noise, and the maps (CBF, CBV, MTT) follow
      (ROIs whose MTT is above three sampling intervals; a shorter MTT is not
      resolved by the data);
-  3. a voxel equal to its ROI gets the ROI's CBF, CBV and MTT.
+  3. a voxel equal to its ROI gets the ROI's CBF, CBV and MTT;
+  4. voxel uncertainty: the tempered Laplace intervals (dof 3) cover the truth of
+     synthetic voxels with smoothed noise, and the implicit-function response
+     dx/dtheta matches refits after a small change of an ROI parameter.
 
 python tests/test_voxel.py  (uses outputs/full_aif/training_22 if present)
 """
@@ -16,9 +19,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import numpy as np  # noqa: E402
 import torch  # noqa: E402
+from scipy.ndimage import gaussian_filter1d  # noqa: E402
 
 from hemopic_plus.npde import transport as TP  # noqa: E402
-from hemopic_plus.npde.voxel import RoiModel, fit_voxels, voxel_maps  # noqa: E402
+from hemopic_plus.npde.voxel import RoiModel, fit_voxels, roi_sensitivity, voxel_laplace, voxel_maps  # noqa: E402
 from hemopic_plus.uq.data import load_subject  # noqa: E402
 from hemopic_plus.uq.torch_model import DTYPE  # noqa: E402
 
@@ -66,8 +70,49 @@ def check(fit_dir):
     return e1, e2, e3
 
 
+def check_uq(fit_dir):
+    b = load_subject(fit_dir)
+    t, dt, shape, w = b.t.numpy(), b.dt, b.shape.numpy(), b.w[0].numpy()
+    cfg = b.cfg
+    rng = np.random.default_rng(1)
+    mtt = 60.0 * torch.exp(b.theta_fit[:, 2] - b.theta_fit[:, 3])
+    i = next(i for i in range(len(b.roi_ids)) if float(mtt[i]) > 3 * dt)
+    th = np.r_[b.theta_fit[i].numpy(), 0.0]
+
+    def make(th_):
+        return RoiModel(cfg, t, dt, shape, th_, n_cells=1)
+    m = make(th)
+    cen = m.centre.numpy()
+    n = 300
+    xt = cen + np.c_[rng.normal(0, .3, n), rng.normal(0, .3, n), rng.uniform(-2, 5, n)]
+    xt[:, 2] = np.clip(xt[:, 2], *cfg.delay_bounds)
+    with torch.no_grad():
+        ct = m.simulate(torch.as_tensor(xt))[1].numpy()
+    e = gaussian_filter1d(rng.standard_normal(ct.shape), cfg.smooth_sigma_frames, axis=1, mode="nearest")
+    cn = ct + 0.03 * ct.max(1, keepdims=True) * e / e.std(1, keepdims=True)
+    lam = dict(lam_v=1e-6, lam_c=1e-6, lam_d=1e-6)
+    x, _, _ = fit_voxels(m, cn, w, **lam)
+    cov, _, _ = voxel_laplace(m, x, cn, w, sigma_s=cfg.smooth_sigma_frames, dof=3, **lam)
+    sd = np.sqrt(np.maximum(np.diagonal(cov, axis1=1, axis2=2), 0.0))
+    cover = float(np.mean(np.abs(x[:, :2] - xt[:, :2]) <= 1.959964 * sd[:, :2]))
+    x0, _, _ = fit_voxels(m, cn, w)
+    dx, _ = roi_sensitivity(make, th, x0, cn, w, cfg.tail_frac)
+    err = 0.0
+    for j in (0, 3):
+        h = 0.01
+        th_j = th.copy()
+        th_j[j] += h
+        xj, _, _ = fit_voxels(make(th_j), cn, w)
+        emp = (xj[:, 0] - x0[:, 0]) / h
+        err = max(err, float(np.median(np.abs(emp - dx[:, 0, j])) / np.median(np.abs(dx[:, 0, j]))))
+    assert 0.85 <= cover <= 0.995, cover
+    assert err < 0.1, err
+    return cover, err
+
+
 if __name__ == "__main__":
     d = Path(__file__).resolve().parent.parent / "outputs" / "full_aif" / "training_22"
     if d.exists():
         print(d, "ROI curve %.1e, synthetic recovery (median rel. error of the maps) %.3f, ROI anchoring %.1e" % check(d))
+        print("voxel Laplace 95%% coverage (dof 3) %.3f, dx/dtheta against refits (median rel. error) %.3f" % check_uq(d))
     print("all tests passed")

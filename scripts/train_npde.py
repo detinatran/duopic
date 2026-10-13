@@ -16,6 +16,7 @@ learned fields. Writes
 import argparse
 import csv
 import json
+import multiprocessing
 import os
 import sys
 import time
@@ -100,7 +101,7 @@ def extra_members(a, cfg, root, pde_root, pids, fit_dirs, co, roi_fold):
     nu = np.zeros((M, B, 2))
     phi = np.zeros((M, B, 2))
     dat = np.zeros((M, B))
-    with ProcessPoolExecutor(max_workers=a.workers) as ex:
+    with ProcessPoolExecutor(max_workers=a.workers, mp_context=multiprocessing.get_context("spawn")) as ex:
         for k, m, t_, n_, p_, d_ in ex.map(run_member, jobs):
             idx = np.where(roi_fold == k)[0]
             th[m - 1, idx], nu[m - 1, idx], phi[m - 1, idx], dat[m - 1, idx] = t_, n_, p_, d_
@@ -154,7 +155,7 @@ def main():
     t0 = time.time()
     B = len(co.roi_ids)
     res = {}
-    with ProcessPoolExecutor(max_workers=a.folds) as ex:
+    with ProcessPoolExecutor(max_workers=a.folds, mp_context=multiprocessing.get_context("spawn")) as ex:
         for r in ex.map(run_fold, jobs):
             res[r[0]] = r
     th = {"npde": np.zeros((B, 8)), "pdeadam": np.zeros((B, 8))}

@@ -147,11 +147,42 @@ Kết luận của bài báo đúng với mô hình gốc. Nhưng **khi sửa l�
 
 Khi tinh chỉnh bằng L-BFGS-B, mức CBF của ROI thay đổi hơn 5% ở 9% / 8% / 22% số ROI (baseline / full / full_aif). Nghĩa là bộ tối ưu Powell của pipeline thường dừng trước khi tới cực tiểu, nhất là với AIF tự động. Có thể thêm một bước đánh bóng bằng gradient vào `fit_roi_curve` gần như không tốn thêm thời gian.
 
+### 2.8 Bất định do AIF
+
+`scripts/run_aif_ensemble.py`: 10 AIF cho mỗi bệnh nhân (bootstrap các voxel động mạch và nhiễu hệ số hiệu chỉnh thể tích từng phần; 2 thành viên cuối dùng cụm động mạch thứ hai), chạy lại toàn bộ pipeline ROI. 36 bệnh nhân có AIF tự động được chấp nhận.
+
+- AUC gần như không đổi: CBF 0.787–0.792, CBV 0.547–0.562, MTT 0.761–0.768 giữa các thành viên; DuoPIC − oSVD giữ dấu ở mọi thành viên.
+- Giá trị tuyệt đối dao động mạnh hơn: CV giữa các thành viên của median trong não là CBF 0.19, CBV 0.16, MTT 0.18 (oSVD MTT 0.07).
+- **Giữa các bệnh nhân** (31 bn có đủ 11 AIF, thang log): MTT median toàn não lệch giữa bệnh nhân sd 0.41, do AIF sd 0.23, ICC 0.65; vùng nhồi máu ICC 0.93; oSVD ICC 0.88. Bootstrap và PVE chỉ đổi MTT khoảng 5% và giữ thứ hạng bệnh nhân (ρ = 0.99); đổi cụm động mạch làm MTT lệch khoảng 56% và đảo thứ hạng (ρ ≈ −0.3). Một ngưỡng tuyệt đối chung cho cả cohort cho AUC MTT 0.749 so với 0.764 khi dùng bản đồ tương đối.
+- Kết luận: giá trị tuyệt đối so sánh được giữa các bệnh nhân khi đã cố định cụm động mạch; chọn cụm là nguồn bất định lớn nhất của AIF.
+
+### 2.9 Bất định ở mức voxel (DuoPIC-vox)
+
+`scripts/run_voxel_uq.py`, 43 bệnh nhân, 3000 voxel mỗi bệnh nhân (một phần ba trong vùng nhồi máu):
+
+- Laplace có nhiệt độ cho từng voxel (κ_v từ phần dư của chính voxel); bất định của ROI truyền xuống bằng định lý hàm ẩn (dx/dθ) và hiệp phương sai của các mẫu posterior ROI.
+- Coverage 95% với bậc tự do dư (n_eff − 3): giấu frame 0.91, bán tổng hợp 0.90–0.94 (log V 0.94, log Cin 0.90, delay 0.94). Không trừ bậc tự do thì khoảng hẹp quá (0.85–0.90).
+- Phần do ROI chiếm khoảng 11% phương sai của log MTT. Tuyến tính hoá khớp với refit dưới 20 mẫu posterior ROI (bn 4, 10, 22: tỉ lệ sd 0.88, Spearman 0.82).
+- Độ rộng khoảng 95% của MTT ở voxel khá lớn (gấp khoảng 1.6–1.8 lần giá trị); posterior/prior sd của log V trung vị 0.62, 30% voxel do dữ liệu quyết định (< 0.5), 19% do prior (> 0.9).
+
+### 2.10 PDE ngẫu nhiên (SPDE)
+
+`hemopic_plus/npde/stochastic.py`, `scripts/run_spde.py`: nhiễu trắng ở lối vào ống (điều kiện biên), nên mỗi hiện thực vẫn bảo toàn khối lượng và MTT. Với θ cố định, đường cong mô là C = Φ(u + η) và dữ liệu đã làm mượt là một Gaussian process, nên likelihood tính chính xác và frame bị giấu được dự đoán bằng điều kiện hoá Gaussian. Fit 2 bước: θ của mô hình vật lý, rồi mức nhiễu σ_u, σ_v.
+
+| 651 ROI, 43 bn | tank: tất định → SPDE | neural PDE: tất định → SPDE |
+|---|---|---|
+| Coverage giấu frame 50 / 80 / 95% | 0.50 / 0.65 / 0.77 → 0.56 / 0.73 / 0.82 | 0.52 / 0.67 / 0.77 → 0.56 / 0.73 / 0.81 |
+| Log score (nat / frame) | +0.24 (p = 3e−6) | +0.15 (p = 0.014) |
+| σ_u (theo biên độ lối vào) | 12% | 10% |
+
+- Bản đồ và nRMSE không đổi. Khoảng tin cậy vẫn hẹp hơn mức danh nghĩa vì chưa cộng bất định tham số.
+- Fit đồng thời θ và nhiễu không dùng được: nhiễu thay luôn phần động lực học (nRMSE của đường cong không nhiễu tăng 2–20 lần, σ_u chạm cận).
+
 ## 3. Hạn chế
 
 - Nhiệt độ κ giả định nhiễu Gaussian, phương sai không đổi theo thời gian và n_eff cố định. Check 1 cho thấy giả định này hơi lạc quan.
 - Bất định voxel chỉ lấy từ mức ROI, không có nhiễu riêng của từng voxel và không có bất định của texture.
-- Chưa đưa bất định của AIF vào (chọn voxel động mạch, hiệu chỉnh thể tích từng phần).
+- Bất định của AIF chỉ có dạng ensemble (mục 2.8), chưa có mô hình Bayes đầy đủ.
 - τ và delay có posterior nhiều đỉnh hoặc bị cắt ở cận. Với hai tham số này nên dùng mẫu MCMC chứ không dùng Laplace, và nên đọc khoảng tin cậy một cách thận trọng.
 
 ## 4. Cách chạy
@@ -165,6 +196,9 @@ python scripts/eval_uq.py configs/full.yaml --data-root <data>       # tổng h�
 python scripts/run_ensemble.py configs/full.yaml --data-root <data>  # ensemble pipeline
 python scripts/make_uq_figures.py --data-root <data>                 # docs/figures/uq_*.png
 python tests/test_uq_torch.py                                        # bản torch khớp bản numpy
+python scripts/run_aif_ensemble.py configs/full_aif.yaml --data-root <data> --members 10   # mục 2.8
+python scripts/run_voxel_uq.py configs/full_aif.yaml --data-root <data>                 # mục 2.9
+python scripts/run_spde.py configs/full_aif.yaml --data-root <data> --noise additive    # mục 2.10
 ```
 
 Đầu ra nằm trong `outputs/<config>/training_XX/uq/`, `.../ens/` và `outputs/<config>/eval_uq/`. Bản tóm tắt theo cohort (`summary.json`, `ensemble.json`, `heldout.csv.gz`, `semisynth.csv.gz`, `tau_diff_draws.npy`) được lưu trong `docs/results/<config>/uq/`.

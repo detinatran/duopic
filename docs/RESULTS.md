@@ -346,3 +346,41 @@ Chi tiết: `docs/NEURAL_PDE.md` mục 7, số liệu: `docs/results/vox_pde/`. 
 - Ở mức voxel, neural PDE khớp đường cong tốt hơn compartment (nMSE −5%) nhưng AUC không tốt hơn.
 - Độ nhạy theo prior (×0.1, ×1, ×10): MTT voxel 0.775 / 0.801 / 0.781, luôn không thua oSVD; mức ×1 được chọn trước khi chạy.
 - So với HemoPIC gốc: DuoPIC-vox hơn ở CBF +0.038, CBV +0.031, MTT +0.079 (cả ba p < 0.001); AUC trung bình tốt hơn ở 31/36 bệnh nhân (`docs/figures/hemopic_vs_duopic_maps.png`, `docs/figures/hemopic_vs_duopic_auc.png`).
+
+## 2k. Bộ ngoài ISLES'24 (CT perfusion)
+
+Kiểm tra tổng quát hoá trên một bộ khác hẳn: 149 ca train của ISLES'24 (nhiều trung tâm, **CT** perfusion thay vì MR, nhồi máu cuối lấy từ MRI theo dõi sau tái thông). Mọi thiết lập giữ nguyên như ISLES 2017, không tune lại. Số liệu: `docs/results/isles24/`.
+
+- **Dữ liệu:** bản mirror Hugging Face (`hugging-science/isles24-stroke`, 27 GB, CC BY-NC-SA 4.0) có CTP thô (1 frame/s) nhưng không có CTP đã đăng ký sang NCCT, và affine của hai ảnh không khớp nhau. `scripts/prepare_isles24.py` đăng ký rigid CTP → NCCT (mutual information, nhiều điểm khởi tạo, loại ca có MI > −0.5), chạy SynthSeg (robust, CT) trên NCCT, rồi đưa nhãn mô, mask nhồi máu và bản đồ vendor về lưới CTP. Nồng độ = HU − baseline. 149/149 ca qua được bước đăng ký; 145 ca có nhồi máu trong vùng chụp.
+- **Dữ liệu thô** (`scripts/eval_external.py`), AUC trung bình CBF/CBV/MTT: vendor 0.687, DuoPIC-vox 0.663, DuoPIC 0.640, HemoPIC 0.616, oSVD 0.586. MTT của oSVD (0.526) kém bất thường.
+- **oSVD cho CT** (`scripts/osvd_grid_ct.py`): yếu tố quyết định là làm mượt không gian chứ không phải ngưỡng. Thiết lập MR (OI 0.095, không làm mượt) 0.586; OI 0.035 0.613; sSVD 20% 0.607; làm mượt trong mặt cắt σ = 3 voxel 0.677; làm mượt σ = 3 + sSVD 20% **0.691**. Thiết lập này được chọn trên chính nhãn của bộ test, nên có lợi cho oSVD.
+- **So sánh công bằng** (`scripts/smooth_external.py`: mọi phương pháp chạy trên cùng CTP đã làm mượt σ = 3), AUC CBF / CBV / MTT / trung bình:
+
+| | CBF | CBV | MTT | TB |
+|---|---|---|---|---|
+| oSVD tốt nhất (σ = 3 + sSVD 20%) | 0.724 | 0.645 | 0.705 | 0.691 |
+| vendor | 0.722 | 0.614 | 0.726 | 0.687 |
+| HemoPIC | 0.741 | 0.610 | 0.709 | 0.687 |
+| DuoPIC | 0.757 | 0.593 | 0.741 | 0.697 |
+| **DuoPIC-vox** | **0.789** | **0.645** | **0.793** | **0.742** |
+
+- DuoPIC-vox hơn oSVD tốt nhất +0.051 (p = 5e−22, 129/145 bn), hơn HemoPIC +0.056 (p = 1e−21, 132/145), hơn vendor +0.055 (p = 2e−21, 128/145). Thứ tự giống ISLES 2017 và khoảng cách còn lớn hơn.
+- Lưu ý: AUC tuyệt đối thấp hơn ISLES 2017 ở mọi phương pháp vì bệnh nhân ISLES'24 đã được tái thông, nên nhồi máu cuối nhỏ hơn vùng giảm tưới máu. Mức làm mượt σ = 3 chọn theo oSVD trên bộ test; với DuoPIC đó là một tham số chung, không tune riêng.
+
+```bash
+python scripts/prepare_isles24.py <hf_parquet_dir> <ISLES2024_Training> --freesurfer <FREESURFER_HOME> --workers 4
+for c in isles24_full_aif isles24_baseline isles24_full_aif_idvox_osvd_nc; do
+  python scripts/run_cohort.py configs/$c.yaml --data-root <ISLES2024_Training>; done
+python scripts/eval_external.py --data-root <ISLES2024_Training>                 # dữ liệu thô
+python scripts/osvd_grid_ct.py --data-root <ISLES2024_Training>                  # oSVD cho CT
+python scripts/smooth_external.py <ISLES2024_Training> <ISLES2024_Training_s3>   # rồi chạy lại 3 cấu hình và eval_external với --out-root riêng
+```
+
+```bash
+python scripts/prepare_isles24.py <hf_parquet_dir> <ISLES2024_Training> --freesurfer <FREESURFER_HOME> --workers 4
+for c in isles24_full_aif isles24_baseline isles24_full_aif_idvox_osvd_nc; do
+  python scripts/run_cohort.py configs/$c.yaml --data-root <ISLES2024_Training>; done
+python scripts/eval_external.py --data-root <ISLES2024_Training>                 # dữ liệu thô
+python scripts/osvd_grid_ct.py --data-root <ISLES2024_Training>                  # oSVD cho CT
+python scripts/smooth_external.py <ISLES2024_Training> <ISLES2024_Training_s3>   # rồi chạy lại 3 cấu hình và eval_external với --out-root riêng
+```

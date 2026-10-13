@@ -172,15 +172,109 @@ def fit_voxels(model, c, w, lam_v=0.02, lam_c=0.02, lam_d=0.002, den_floor=0.05,
     return x_out.numpy(), loss_out.numpy(), data_out.numpy()
 
 
-def voxel_maps(model, x, tail_frac):
-    """CBF, CBV and MTT of fitted voxels x (N, 3) = (log V, log Cin, delay), anchored
-    on the ROI: CBF_roi is the tail mean of the ROI outflow and CBV_roi its V."""
+def roi_cbf(model, tail_frac):
+    """CBF level of the ROI: tail mean of its Windkessel outflow (as for the ROI level of the maps)."""
     with torch.no_grad():
         q_out, _ = model.simulate(model.centre[None, :])
     q = q_out[0].numpy()
     tail = int(max(3, int(np.floor(q.size * float(tail_frac)))))
-    cbf_roi = float(max(q[q.size - tail:].mean(), 1e-9))
+    return float(max(q[q.size - tail:].mean(), 1e-9))
+
+
+def voxel_maps(model, x, tail_frac):
+    """CBF, CBV and MTT of fitted voxels x (N, 3) = (log V, log Cin, delay), anchored
+    on the ROI: CBF_roi is the tail mean of the ROI outflow and CBV_roi its V."""
+    cbf_roi = roi_cbf(model, tail_frac)
     v_roi, cin_roi = float(torch.exp(model.theta[2])), float(model.theta[4])
     mtt = 60.0 * np.exp(x[:, 0]) / cbf_roi
     cbv = v_roi * np.exp(x[:, 1] - cin_roi)
     return 60.0 * cbv / mtt, cbv, mtt
+
+
+def _scaled_weights(model, c, w, den_floor):
+    T = c.shape[1]
+    floor = den_floor * float((w * model.roi_curve() ** 2).mean())
+    den = torch.clamp((w[None, :] * c ** 2).mean(dim=1, keepdim=True), min=floor)
+    return torch.sqrt(w[None, :] / (T * den)), den[:, 0]
+
+
+def _residuals(model, x, c, sw, sq_prior, centre):
+    _, cf = model.simulate(x)
+    return torch.cat([sw * (cf - c), sq_prior * (x - centre)], dim=1), cf
+
+
+def _jacobian(model, x, c, sw, sq_prior, centre, r):
+    h = torch.as_tensor([1e-4, 1e-4, 1e-3], dtype=DTYPE)
+    eye = torch.eye(3, dtype=DTYPE)
+    return torch.stack([(_residuals(model, x + h[k] * eye[k], c, sw, sq_prior, centre)[0] - r) / h[k] for k in range(3)], dim=2)
+
+
+def voxel_laplace(model, x, c, w, lam_v=0.02, lam_c=0.02, lam_d=0.002, den_floor=0.05, sigma_s=1.8, dof=0, chunk=16384):
+    """Tempered Laplace posterior of the voxel parameters, read like the ROI posterior:
+    p(x | c) is proportional to exp(-kappa_v L_v) with kappa_v = n_eff D_v / (2 N_v), where
+    N_v is the weighted squared residual of the voxel at its fit, D_v its (floored)
+    signal energy and n_eff the effectively independent frames among those with
+    weight (dof > 0: n_eff - dof, the residual degrees of freedom of the voxel fit).
+    The covariance is the inverse of the Gauss-Newton Hessian 2 kappa_v J^T J
+    of the stacked data and prior residuals (box bounds ignored).
+    Returns the covariance (N, 3, 3), kappa_v (N,) and the prior standard deviations
+    (N, 3) under the same temperature."""
+    c = torch.as_tensor(c, dtype=DTYPE)
+    x = torch.as_tensor(x, dtype=DTYPE)
+    w = torch.as_tensor(w, dtype=DTYPE)
+    N = c.shape[0]
+    lam = torch.as_tensor([lam_v, lam_c, lam_d], dtype=DTYPE)
+    sq_prior = torch.sqrt(lam)
+    centre = model.centre
+    n_eff = float((w > 0).sum()) / (2.0 * np.sqrt(np.pi) * float(sigma_s)) - float(dof)
+    cov = torch.empty(N, 3, 3, dtype=DTYPE)
+    kap = torch.empty(N, dtype=DTYPE)
+    with torch.no_grad():
+        for s in range(0, N, chunk):
+            cc, xx = c[s:s + chunk], x[s:s + chunk]
+            sw, den = _scaled_weights(model, cc, w, den_floor)
+            r, cf = _residuals(model, xx, cc, sw, sq_prior, centre)
+            J = _jacobian(model, xx, cc, sw, sq_prior, centre, r)
+            num = (w[None, :] * (cf - cc) ** 2).mean(dim=1)
+            k_v = n_eff * den / (2.0 * torch.clamp(num, min=1e-30))
+            H = 2.0 * k_v[:, None, None] * (J.transpose(1, 2) @ J)
+            cov[s:s + cc.shape[0]] = torch.linalg.inv(H + 1e-12 * torch.eye(3, dtype=DTYPE))
+            kap[s:s + cc.shape[0]] = k_v
+    prior_sd = 1.0 / torch.sqrt(2.0 * kap[:, None] * lam[None, :])
+    return cov.numpy(), kap.numpy(), prior_sd.numpy()
+
+
+def roi_sensitivity(make_model, theta, x, c, w, tail_frac, lam_v=0.02, lam_c=0.02, lam_d=0.002, den_floor=0.05,
+                    step=1e-4, chunk=16384):
+    """Linear response of the voxel fit to the ROI parameters (implicit function
+    theorem with Gauss-Newton blocks): dx/dtheta = -(J_x^T J_x)^-1 J_x^T J_theta, where
+    J_theta is the change of the voxel's stacked residuals (data and priors, whose
+    centres are ROI parameters) when one ROI parameter moves. make_model(theta)
+    builds the RoiModel of the ROI. Returns dx/dtheta (N, 3, P) and
+    d log CBF_roi / dtheta (P,)."""
+    theta = np.asarray(theta, dtype=np.float64)
+    P = theta.size
+    c = torch.as_tensor(c, dtype=DTYPE)
+    x = torch.as_tensor(x, dtype=DTYPE)
+    w = torch.as_tensor(w, dtype=DTYPE)
+    N = c.shape[0]
+    sq_prior = torch.sqrt(torch.as_tensor([lam_v, lam_c, lam_d], dtype=DTYPE))
+    base = make_model(theta)
+    moved = []
+    for j in range(P):
+        th = theta.copy()
+        th[j] += step
+        moved.append(make_model(th))
+    lcbf0 = np.log(roi_cbf(base, tail_frac))
+    dlcbf = np.array([(np.log(roi_cbf(m, tail_frac)) - lcbf0) / step for m in moved])
+    out = torch.empty(N, 3, P, dtype=DTYPE)
+    with torch.no_grad():
+        for s in range(0, N, chunk):
+            cc, xx = c[s:s + chunk], x[s:s + chunk]
+            sw, _ = _scaled_weights(base, cc, w, den_floor)
+            r0, _ = _residuals(base, xx, cc, sw, sq_prior, base.centre)
+            Jx = _jacobian(base, xx, cc, sw, sq_prior, base.centre, r0)
+            Jt = torch.stack([(_residuals(m, xx, cc, sw, sq_prior, m.centre)[0] - r0) / step for m in moved], dim=2)
+            JtJ = Jx.transpose(1, 2) @ Jx + 1e-12 * torch.eye(3, dtype=DTYPE)
+            out[s:s + cc.shape[0]] = -torch.linalg.solve(JtJ, Jx.transpose(1, 2) @ Jt)
+    return out.numpy(), dlcbf
