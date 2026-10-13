@@ -111,7 +111,8 @@ def main():
                 s[f"p_{m}_vs_osvd"] = float(wilcoxon(d).pvalue) if np.any(d != 0) else 1.0
         common = [pid for pid in pids if pid in mtt_brain[v] and pid in mtt_brain["osvd"]]
         if v != "osvd" and len(common) > 3:
-            xm = np.array([mtt_brain[v][pid] for pid in common]); ym = np.array([mtt_brain["osvd"][pid] for pid in common])
+            xm = np.array([mtt_brain[v][pid] for pid in common])
+            ym = np.array([mtt_brain["osvd"][pid] for pid in common])
             ok = np.isfinite(xm) & np.isfinite(ym)
             s["mtt_brain_r_vs_osvd"] = float(pearsonr(xm[ok], ym[ok])[0])
         summ["variants"][v] = s

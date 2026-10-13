@@ -143,9 +143,12 @@ def fig_fields(out, data_root, cfgs, n_cells=24):
                 nu, phi = z["nu"][k], z["phi"][k]
                 fast = int(np.argmax(phi / nu))
                 coll[g]["ratio"].append((phi[fast] / nu[fast]) / (phi[1 - fast] / nu[1 - fast]))
-                coll[g]["nu"].append(nu[fast]); coll[g]["phif"].append(phi[fast])
-                coll[g]["cvn"].append(z["cv_npde"][k]); coll[g]["cvp"].append(z["cv_pde"][k])
-                coll[g]["pe"].append(z["theta"][k, 7]); coll[g]["pep"].append(z["theta_pde"][k, 7])
+                coll[g]["nu"].append(nu[fast])
+                coll[g]["phif"].append(phi[fast])
+                coll[g]["cvn"].append(z["cv_npde"][k])
+                coll[g]["cvp"].append(z["cv_pde"][k])
+                coll[g]["pe"].append(z["theta"][k, 7])
+                coll[g]["pep"].append(z["theta_pde"][k, 7])
         ax = axes[i, 0]
         for g, gl in GROUPS:
             ax.scatter(coll[g]["phif"], coll[g]["ratio"], s=9, alpha=0.6, color=gcol[g], lw=0, label=gl)

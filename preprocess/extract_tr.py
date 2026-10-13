@@ -10,7 +10,6 @@ python preprocess/extract_tr.py D:/data/ISLES2017_Training configs/isles2017_tr.
 """
 import csv
 import json
-import re
 import sys
 from collections import defaultdict
 from pathlib import Path

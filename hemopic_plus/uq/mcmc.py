@@ -88,7 +88,6 @@ def rhat_ess(samples):
     B, C, S, P = samples.shape
     h = S // 2
     sp = torch.cat([samples[:, :, :h], samples[:, :, h:2 * h]], dim=1)   # (B, 2C, h, P)
-    m = sp.shape[1]
     chain_mean = sp.mean(dim=2)
     chain_var = sp.var(dim=2, unbiased=True)
     W = chain_var.mean(dim=1)

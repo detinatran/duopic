@@ -226,7 +226,9 @@ def main():
     H, S, E, MR = [], [], [], []
     with ProcessPoolExecutor(max_workers=workers) as ex:
         for name, info, hrows, srows, ens, mrows, sec in ex.map(run_subject, jobs):
-            H += hrows; S += srows; MR += mrows
+            H += hrows
+            S += srows
+            MR += mrows
             if ens:
                 E.append(ens)
             if info["rhat_max"] > 2:

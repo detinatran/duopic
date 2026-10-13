@@ -170,7 +170,7 @@ def process_one(
         print("missing_ref24", subj)
         return "missing"
 
-    out_dir = ensure_dir(hemopic_seg4_dir(data_subj))
+    ensure_dir(hemopic_seg4_dir(data_subj))
     out_label = hemopic_seg4_label_path(data_subj)
     out_gray = hemopic_seg4_gray_path(data_subj)
 

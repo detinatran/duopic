@@ -81,7 +81,9 @@ def fig_maps(out, data_root, pid):
             cm.set_bad("#fcfcfb")
             im = ax.imshow(img, origin="lower", cmap=cm, vmin=vmin, vmax=vmax, interpolation="nearest")
             ax.contour(o2, levels=[0.5], colors=[INK], linewidths=0.8, origin="lower")
-            ax.set_xticks([]); ax.set_yticks([]); ax.grid(False)
+            ax.set_xticks([])
+            ax.set_yticks([])
+            ax.grid(False)
             for s in ax.spines.values():
                 s.set_visible(False)
             ax.set_title(title, fontsize=8.5, color=INK)

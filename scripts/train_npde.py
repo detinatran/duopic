@@ -96,7 +96,10 @@ def extra_members(a, cfg, root, pde_root, pids, fit_dirs, co, roi_fold):
     print(f"[{cfg.name}] network ensemble: {M} bootstrap members per fold, {len(jobs)} trainings, {a.workers} at a time")
     t0 = time.time()
     B = len(co.roi_ids)
-    th = np.zeros((M, B, 8)); nu = np.zeros((M, B, 2)); phi = np.zeros((M, B, 2)); dat = np.zeros((M, B))
+    th = np.zeros((M, B, 8))
+    nu = np.zeros((M, B, 2))
+    phi = np.zeros((M, B, 2))
+    dat = np.zeros((M, B))
     with ProcessPoolExecutor(max_workers=a.workers) as ex:
         for k, m, t_, n_, p_, d_ in ex.map(run_member, jobs):
             idx = np.where(roi_fold == k)[0]
@@ -111,7 +114,7 @@ def extra_members(a, cfg, root, pde_root, pids, fit_dirs, co, roi_fold):
         z["phi_members"] = np.concatenate([z["phi"][None], phi[:, sel]])
         z["n_cells"] = a.cells
         np.savez_compressed(f, **z)
-    print(f"  held-out data term median per member: " + ", ".join(f"{np.median(d):.4f}" for d in dat))
+    print("  held-out data term median per member: " + ", ".join(f"{np.median(d):.4f}" for d in dat))
 
 
 def main():

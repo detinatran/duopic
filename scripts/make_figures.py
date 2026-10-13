@@ -240,7 +240,9 @@ def fig_maps(outputs, data_root, pid=22):
             ax = axes[i, j]
             ax.imshow(rel.T, origin="lower", cmap=cmap, vmin=0, vmax=2.5, interpolation="nearest")
             ax.contour(ot[:, :, z][crop].T, levels=[0.5], colors=[C[1]], linewidths=1.0, origin="lower")
-            ax.set_xticks([]); ax.set_yticks([]); ax.grid(False)
+            ax.set_xticks([])
+            ax.set_yticks([])
+            ax.grid(False)
             for s in ax.spines.values():
                 s.set_visible(False)
             if i == 0:
@@ -249,7 +251,9 @@ def fig_maps(outputs, data_root, pid=22):
                 ax.set_ylabel(name, color=INK, fontsize=9)
         ax = axes[i, 3]
         ax.imshow(ot[:, :, z][crop].T, origin="lower", cmap="Greys", vmin=0, vmax=1.6, interpolation="nearest")
-        ax.set_xticks([]); ax.set_yticks([]); ax.grid(False)
+        ax.set_xticks([])
+        ax.set_yticks([])
+        ax.grid(False)
         for s in ax.spines.values():
             s.set_visible(False)
         if i == 0:

@@ -35,7 +35,7 @@ import torch  # noqa: E402
 from scipy.optimize import minimize  # noqa: E402
 
 from hemopic_plus.config import load_config  # noqa: E402
-from hemopic_plus.evaluation import MAPS, REGIONS, evaluate_subject, roc_auc  # noqa: E402
+from hemopic_plus.evaluation import MAPS, REGIONS, evaluate_subject  # noqa: E402
 from hemopic_plus.io import list_patients, subject_id  # noqa: E402
 from hemopic_plus.npde import transport as TP  # noqa: E402
 from hemopic_plus.uq import laplace as LP  # noqa: E402
@@ -143,7 +143,8 @@ def run_subject(args):
     with torch.no_grad():
         _, c_pde = TP.simulate(b, th_pde, n_cells)
         d_pde = {k: v.numpy() for k, v in derived(b, th_pde[:, :7]).items()}   # the outflow does not depend on the tissue model
-        nm = lambda c: ((b.w * (c - b.c_obs) ** 2).mean(1) / (b.w * b.c_obs ** 2).mean(1)).numpy()
+        def nm(c):
+            return ((b.w * (c - b.c_obs) ** 2).mean(1) / (b.w * b.c_obs ** 2).mean(1)).numpy()
         data_pol, data_pde = nm(c_pol), nm(c_pde)
     sub = fit_dir.name
     write_variant(fit_dir, root.parent / f"{name}__polish" / sub, b, c_pol.numpy(),

@@ -111,9 +111,17 @@ def load_cohort(fit_dirs, pde_root=None, pe_bounds=(0.02, 100.0)):
             ttp, wr = _curve_features(b.c_obs[k].numpy(), sh, tt)
             feats.append([float(b.tissue[k] == s) for s in TISSUES]
                          + [float(b.log_f0[k]), float(b.log_v0[k]), float(b.log_v0[k] - b.log_f0[k]), ttp, np.log(wr)])
-            subj.append(pid); rids.append(int(b.roi_ids[k])); tis.append(b.tissue[k]); nfr.append(T)
+            subj.append(pid)
+            rids.append(int(b.roi_ids[k]))
+            tis.append(b.tissue[k])
+            nfr.append(T)
             i += 1
-        f0.append(b.log_f0); v0.append(b.log_v0); c0.append(b.log_cin0); LO.append(lo); HI.append(hi); TH.append(th0)
+        f0.append(b.log_f0)
+        v0.append(b.log_v0)
+        c0.append(b.log_cin0)
+        LO.append(lo)
+        HI.append(hi)
+        TH.append(th0)
     feats = np.array(feats)
     mu, sd = feats.mean(0), feats.std(0) + 1e-9
     mu[:len(TISSUES)], sd[:len(TISSUES)] = 0.0, 1.0           # keep one-hot as is

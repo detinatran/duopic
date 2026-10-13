@@ -66,9 +66,9 @@ def prior_sd(batch, kappa):
     if P == 8:
         lam += [0.0]                                     # log Pe of the transport PDE: no penalty
     out = torch.empty(B, P, dtype=DTYPE)
-    for k, l in enumerate(lam):
-        if l > 0:
-            out[:, k] = 1.0 / torch.sqrt(2.0 * kappa * float(l))
+    for k, lam_k in enumerate(lam):
+        if lam_k > 0:
+            out[:, k] = 1.0 / torch.sqrt(2.0 * kappa * float(lam_k))
         else:
             out[:, k] = (batch.hi[:, k] - batch.lo[:, k]) / np.sqrt(12.0)
         out[:, k] = torch.minimum(out[:, k], (batch.hi[:, k] - batch.lo[:, k]) / np.sqrt(12.0))

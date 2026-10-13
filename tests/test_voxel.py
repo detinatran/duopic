@@ -58,7 +58,7 @@ def check(fit_dir):
                 q = m.simulate(m.centre[None, :])[0][0].numpy()
             tail = int(max(3, int(np.floor(q.size * float(b.cfg.tail_frac)))))
             q_mean = q[q.size - tail:].mean()
-            v_roi = float(np.exp(th[2]))
+            v_roi = float(torch.exp(th[2]))
             e3 = max(e3, abs(f0[0] / q_mean - 1), abs(v0[0] / v_roi - 1), abs(m0[0] / (60 * v_roi / q_mean) - 1))
     assert e1 < 1e-8, e1
     assert e2 < 0.05, e2

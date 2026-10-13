@@ -206,7 +206,9 @@ def fig_maps(out, data_root, cfgs, pid=22, show_title=True):
             cm.set_bad(plt.rcParams["axes.facecolor"])
             im = ax.imshow(img[:, :, z][crop].T, origin="lower", cmap=cm, vmin=0, vmax=vmax, interpolation="nearest")
             ax.contour(ot[:, :, z][crop].T, levels=[0.5], colors=[INK], linewidths=0.8, origin="lower")
-            ax.set_xticks([]); ax.set_yticks([]); ax.grid(False)
+            ax.set_xticks([])
+            ax.set_yticks([])
+            ax.grid(False)
             for s in ax.spines.values():
                 s.set_visible(False)
             if i == 0:
@@ -261,7 +263,9 @@ def fig_maps_column(out, data_root, cfgs, pid=22, width=3.35):
                 ax = fig.add_subplot(gs[i, j])
                 im = ax.imshow(img[:, :, z][crop].T, origin="lower", cmap=cm, vmin=0, vmax=vmax, interpolation="nearest")
                 ax.contour(ot[:, :, z][crop].T, levels=[0.5], colors=[INK], linewidths=0.5, origin="lower")
-                ax.set_xticks([]); ax.set_yticks([]); ax.grid(False)
+                ax.set_xticks([])
+                ax.set_yticks([])
+                ax.grid(False)
                 for sp in ax.spines.values():
                     sp.set_visible(False)
                 if i == 0:
@@ -345,7 +349,9 @@ def fig_roi_example(out, data_root, cfgs, pid=22):
         ys = np.concatenate([[-2 * psd[2], 2 * psd[2]], np.percentile(dy, [0.5, 99.5])])
         c, h = (xs.min() + xs.max()) / 2, 0.55 * max(np.ptp(xs), np.ptp(ys))
         cy = (ys.min() + ys.max()) / 2
-        ax.set_xlim(c - h, c + h); ax.set_ylim(cy - h, cy + h); ax.set_aspect("equal", adjustable="box")
+        ax.set_xlim(c - h, c + h)
+        ax.set_ylim(cy - h, cy + h)
+        ax.set_aspect("equal", adjustable="box")
         ax.set_xlabel("log F − prior centre")
         ax.set_ylabel("log V − prior centre")
         ax.set_title("lesion ROI: F and V vs their prior", loc="left", fontsize=9, color=INK)
@@ -372,7 +378,7 @@ def fig_widths(out, cfgs):
             ax.text(xx, max(s[q]["all"], s[q]["GM"]) + 0.06, f"{s[q]['all']:.0%}", ha="center", fontsize=7, color=INK)
     ax.plot([], [], "^", color=INK, ms=4, label="grey matter")
     ax.plot([], [], "v", color=INK2, ms=4, label="white matter")
-    ax.set_xticks(range(len(qty)), [l for _, l in qty])
+    ax.set_xticks(range(len(qty)), [label for _, label in qty])
     ax.set_ylabel("95% interval width / value (ROI median)")
     ax.set_title("How wide are the intervals? (651 ROIs)", loc="left", color=INK)
     ax.legend(fontsize=7, ncol=2, frameon=False, loc="upper left")
@@ -415,6 +421,7 @@ def main():
     fig_tau(out, a.configs)
     mc = a.map_configs or [c for c in a.configs if c != "full_aif"]
     fig_maps(out, a.data_root, mc)
+    fig_maps_column(out, a.data_root, mc)
     fig_roi_example(out, a.data_root, mc)
     fig_widths(out, a.configs)
     print("figures ->", FIG)

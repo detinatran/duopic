@@ -157,8 +157,11 @@ def main():
                     neg = rng.choice(neg, min(a.per_class, neg.size), replace=False)
                     for idx, lab in ((pos, 1.0), (neg, 0.0)):
                         if idx.size:
-                            Xs.append(X[idx]); ys.append(np.full(idx.size, lab)); ws.append(np.full(idx.size, 1.0 / idx.size))
-                Xtr = np.concatenate(Xs); mu, sd = Xtr.mean(0), Xtr.std(0) + 1e-6
+                            Xs.append(X[idx])
+                            ys.append(np.full(idx.size, lab))
+                            ws.append(np.full(idx.size, 1.0 / idx.size))
+                Xtr = np.concatenate(Xs)
+                mu, sd = Xtr.mean(0), Xtr.std(0) + 1e-6
                 net = fit_model((Xtr - mu) / sd, np.concatenate(ys), np.concatenate(ws), kind, seed=k)
                 with torch.no_grad():
                     for pid in te:

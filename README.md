@@ -1,6 +1,26 @@
-# HemoPIC+
+# DuoPIC
 
-An extension of [HemoPIC](https://github.com/jhuldr/HemoPIC) (MICCAI 2026), a physics-informed digital twin for cerebral perfusion. HemoPIC+ adds the changes C1–C9; each one is switched on or off from a config file. The `baseline` config reproduces the original HemoPIC **bit for bit**, and an automated test checks this.
+Code of **DuoPIC**, a perfusion digital twin that couples a Windkessel model of regional blood flow with a transport PDE for the passage of the tracer, a neural closure shared across patients, calibrated uncertainty for every estimate, and a tuning-free voxel-level fit (DuoPIC-vox). It extends [HemoPIC](https://github.com/jhuldr/HemoPIC) (MICCAI 2026). The Python package keeps its working name, `hemopic_plus` (HemoPIC+ in the documents).
+
+## Paper and code
+
+| In the paper | Code | Commands | Detailed results |
+|---|---|---|---|
+| Corrections of the HemoPIC pipeline | `hemopic_plus/` (C1–C9 below), `configs/` | `scripts/run_cohort.py`, `scripts/evaluate.py`, `scripts/compare.py` | `docs/RESULTS.md` |
+| Uncertainty quantification | `hemopic_plus/uq/` | `scripts/run_uq.py`, `scripts/eval_heldout.py`, `scripts/eval_semisynth.py`, `scripts/eval_uq.py`, `scripts/run_ensemble.py` | `docs/UNCERTAINTY.md` |
+| Transport PDE and neural closure (Table 1) | `hemopic_plus/npde/transport.py`, `neural.py`, `uqbatch.py` | `scripts/run_pde.py`, `scripts/train_npde.py`, `scripts/run_npde_uq.py` | `docs/NEURAL_PDE.md` |
+| Voxel-level fit, DuoPIC-vox | `hemopic_plus/npde/voxel.py` | `scripts/run_voxel_pde.py`, `scripts/eval_voxel_maps.py` | `docs/NEURAL_PDE.md`, section 7 |
+| Nested hyperparameter search (DuoPIC tuned) | Optuna | `scripts/tune_optuna.py --outer-folds 3`, `scripts/pool_nested.py` | `docs/RESULTS.md`, section 2g |
+| Lesion AUC against oSVD with the same AIF (Table 2) | `hemopic_plus/osvd.py` | `scripts/osvd_check.py`, `scripts/compare_osvd.py`, `scripts/eval_voxel_maps.py` | `docs/results/osvd/`, `docs/results/vox_pde/` |
+| Fig. 2 (residuals around the bolus peak) | | `scripts/make_npde_figures.py --configs full_aif --only residuals` | |
+| Fig. 3 (uncertainty maps) | | `scripts/make_uq_figures.py --configs full_aif full_aif__npde --map-configs full_aif full_aif__npde` (`*maps_column.png`) | |
+| Figs. 4–5 (HemoPIC versus DuoPIC-vox) | | `scripts/make_hemopic_comparison.py` | `docs/results/vox_pde/hemopic_vs_duopic.json` |
+
+Tests: `python tests/test_baseline_equivalence.py`, `tests/test_uq_torch.py`, `tests/test_npde.py`, `tests/test_voxel.py` (each prints `all tests passed`).
+
+## HemoPIC+ changes
+
+HemoPIC+ adds the changes C1–C9 to HemoPIC; each one is switched on or off from a config file. The `baseline` config reproduces the original HemoPIC **bit for bit**, and an automated test checks this.
 
 - **C1** Use each subject's true repetition time (TR) instead of a fixed dt of 1 s.
 - **C5** Make the flow units in the tracer compartment consistent (rate F/(60·V) per second).
@@ -45,7 +65,7 @@ Most of the gap between HemoPIC and the ISLES Deconv maps comes from processing 
 
 The original tracer compartment applies the exchange rate F/V per second, while F comes from CBF in ml/100g/min (a unit mismatch, fixed by C5). As a result, the data cannot constrain F and V, and the fitted values stay at the priors (ratio ≈ 1). After the fix, the model actually learns from the curves.
 
-### Tracer curve reconstruction (compare with Fig. 5b of the paper)
+### Tracer curve reconstruction (compare with Fig. 5b of the HemoPIC paper)
 
 ![Tracer curves](docs/figures/tracer_curves.png)
 
@@ -103,7 +123,7 @@ The intervals for CBF and CBV are reliable. Those for MTT (in HemoPIC+) and τ a
 
 Check 2 removes the q% voxels with the widest relative interval and recomputes the lesion ROC AUC; removing the same number of random voxels leaves the AUC unchanged. For MTT the AUC rises in every config. For CBF it rises only with `full` (0.782 → 0.802). In the original HemoPIC and `full_aif`, the most uncertain CBF voxels are the lesion itself (low flow, weak signal), so removing them lowers the AUC.
 
-### The paper's τ claim with uncertainty
+### The HemoPIC paper's τ claim with uncertainty
 
 ![tau claim](docs/figures/uq_tau.png)
 
@@ -169,7 +189,7 @@ The same posterior, Laplace + MCMC, voxel maps and checks run on the eight physi
 - The intervals are both narrower and better calibrated. CBF 95% width falls from 85% to 72% of the value (`full_aif`). The weak point of HemoPIC+, overconfident MTT intervals, is largely fixed, and the MTT error halves (15.7% → 8.9%): the tank had to trade MTT against delay, while the tube separates late arrival from transit.
 - Network uncertainty is more than 10 times smaller than the posterior: the voxel CBF sd across networks is 0.6%, against 16.9% from the physical parameters, and the AUC varies by at most 0.005 across networks.
 - With `full_aif`, removing uncertain CBF voxels no longer lowers the lesion AUC (HemoPIC+: 0.785 → 0.763; neural PDE: 0.784 → 0.783), because the lesion is no longer where the fit is poor.
-- The paper's τ claim stays reversed (+24.6 s, 95% CI [+19.0, +30.3] with `full_aif`).
+- The HemoPIC paper's τ claim stays reversed (+24.6 s, 95% CI [+19.0, +30.3] with `full_aif`).
 - Caveat: MCMC mixes worse than for the tank (R-hat > 1.1 in 16% of ROIs vs 5%), because Pe and the delay often sit at a bound. Details: [docs/NEURAL_PDE.md](docs/NEURAL_PDE.md), section 6.
 
 ## Repository layout
@@ -188,7 +208,7 @@ hemopic_plus/         # library
   config.py  io.py  signal.py  models.py  fit.py  pipeline.py  evaluation.py  aif.py  osvd.py
   uq/                 # uncertainty: torch_model.py (differentiable model), data.py, laplace.py, mcmc.py
   npde/               # transport.py (PDE tissue model, exact modal solver), neural.py (two-tube neural closure),
-                      # uqbatch.py (runs the uq/ tools on the PDE model)
+                      # uqbatch.py (runs the uq/ tools on the PDE model), voxel.py (voxel-level fit, DuoPIC-vox)
 scripts/
   run_cohort.py       # fits the whole cohort in parallel
   evaluate.py         # tracer nRMSE + lesion ROC AUC
@@ -209,8 +229,16 @@ scripts/
   make_npde_figures.py  # the PDE / neural PDE figures
   run_npde_uq.py      # uncertainty of the neural PDE: posterior, checks 1 and 3, network ensemble
   compare_osvd.py     # PDE / neural PDE against oSVD with the same AIF
-  tune_optuna.py      # Optuna hyperparameter search with a held-out test set of patients
-tests/                # the baseline must match the original HemoPIC
+  tune_optuna.py      # Optuna hyperparameter search (held-out test set, or nested with --outer-folds)
+  pool_nested.py      # pools the outer folds of the nested search
+  timing_maps.py      # timing maps: TTP, oSVD Tmax, model delay, CTH
+  partition_scan.py   # finer ROI partitions, nested in the outer folds
+  lesion_score.py     # multiparametric lesion score (maps, timing, asymmetry, uncertainty)
+  run_voxel_pde.py    # voxel-level fit of the transport model (DuoPIC-vox)
+  eval_voxel_maps.py  # DuoPIC-vox maps (central volume theorem) against oSVD and the nested search
+  make_voxel_figures.py       # the voxel-level figures
+  make_hemopic_comparison.py  # HemoPIC versus DuoPIC-vox (paper Figs. 4-5)
+tests/                # the baseline must match the original HemoPIC; torch model, PDE and voxel fit checks
 run_experiments.ps1 / .sh   # runs every experiment
 ```
 
@@ -229,7 +257,7 @@ python tests\test_baseline_equivalence.py      # should print: all tests passed
 
 Linux/macOS: the same, with `source .venv/bin/activate`.
 
-The uncertainty scripts also need PyTorch (CPU is enough): `pip install torch`, then `python tests/test_uq_torch.py`.
+`requirements.txt` includes PyTorch (CPU is enough) for the uncertainty, PDE and voxel scripts, and Optuna for the hyperparameter search.
 
 ## Data
 
@@ -244,7 +272,7 @@ python preprocess/prepare_isles2017.py D:/data --skip-synthseg  # on a machine w
 
 Then set `data_root` in the configs, or pass `--data-root D:/data/ISLES2017_Training` when running.
 
-The Zenodo release has 43 subjects (training_1..48, with 3, 17, 25, 29 and 34 missing); the paper used 44.
+The Zenodo release has 43 subjects (training_1..48, with 3, 17, 25, 29 and 34 missing); the HemoPIC paper used 44.
 
 ## Running
 

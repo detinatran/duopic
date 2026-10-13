@@ -40,14 +40,21 @@ def load_subject(fit_dir: Path, only_success=True):
         if only_success and not bool(z["success"][i]):
             continue
         f0, v0, c0 = float(r["F_prior"]), float(r["V_prior"]), float(r["Cin_prior"])
-        l, h = bounds_for(cfg, t, dt, f0, v0, c0)
+        lo_i, hi_i = bounds_for(cfg, t, dt, f0, v0, c0)
         th = [np.log(float(r["R_fit"])), np.log(float(r["tau_fit"])), np.log(float(r["V_fit"])),
               np.log(float(r["F_fit"])), np.log(float(r["Cin_bar_fit"]))]
         if cfg.delay_dispersion:
             th += [float(r["delay_fit"]), np.log(max(float(r["dispersion_fit"]), 1e-12))]
-        keep.append(i); theta.append(th); lo.append(l); hi.append(h)
-        f0s.append(max(f0, 1e-6)); v0s.append(max(v0, 1e-6)); c0s.append(max(c0, 1e-6)); tissue.append(r["tissue"])
-    T = lambda a: torch.as_tensor(np.asarray(a, dtype=np.float64), dtype=DTYPE)
+        keep.append(i)
+        theta.append(th)
+        lo.append(lo_i)
+        hi.append(hi_i)
+        f0s.append(max(f0, 1e-6))
+        v0s.append(max(v0, 1e-6))
+        c0s.append(max(c0, 1e-6))
+        tissue.append(r["tissue"])
+    def T(a):
+        return torch.as_tensor(np.asarray(a, dtype=np.float64), dtype=DTYPE)
     c_obs = z["c_obs"][keep].astype(np.float64)
     batch = RoiBatch(
         roi_ids=z["roi_ids"][keep].astype(int), tissue=tissue, c_obs=T(c_obs),

@@ -67,9 +67,12 @@ def bounds_for(cfg, t, dt, f0, v0, cin0):
     tau_max = min(float(cfg.tau_cap_seconds), 0.98 * t_end)
     if not tau_max > tau_min:
         tau_max = tau_min + 20.0 * float(dt)
-    f_lo = max(f0 * 0.20, 1e-6); f_hi = max(f0 * 5.0, f_lo * 1.10)
-    v_lo = max(v0 * 0.20, 1e-6); v_hi = max(v0 * 5.0, v_lo * 1.10)
-    c_lo = max(cin0 * 0.10, 1e-6); c_hi = max(cin0 * 10.0, c_lo * 1.10)
+    f_lo = max(f0 * 0.20, 1e-6)
+    f_hi = max(f0 * 5.0, f_lo * 1.10)
+    v_lo = max(v0 * 0.20, 1e-6)
+    v_hi = max(v0 * 5.0, v_lo * 1.10)
+    c_lo = max(cin0 * 0.10, 1e-6)
+    c_hi = max(cin0 * 10.0, c_lo * 1.10)
     lo = [np.log(1e-10), np.log(tau_min), np.log(v_lo), np.log(f_lo), np.log(c_lo)]
     hi = [np.log(float(cfg.r_max)), np.log(tau_max), np.log(v_hi), np.log(f_hi), np.log(c_hi)]
     if cfg.delay_dispersion:
