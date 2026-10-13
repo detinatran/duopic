@@ -36,22 +36,22 @@ TISSUES = ("GM", "WM", "CSF", "BrainStem")
 
 @dataclass
 class Cohort:
-    subject: np.ndarray        # (B,) patient number of each ROI
-    roi_ids: np.ndarray        # (B,)
+    subject: np.ndarray
+    roi_ids: np.ndarray
     tissue: list
-    t: torch.Tensor            # (B, T) padded time axis
-    dt: torch.Tensor           # (B,)
-    shape: torch.Tensor        # (B, T) arterial curve of the ROI's patient
-    c_obs: torch.Tensor        # (B, T)
-    w: torch.Tensor            # (B, T) HemoPIC weights, 0 on padding
-    n_frames: np.ndarray       # (B,)
+    t: torch.Tensor
+    dt: torch.Tensor
+    shape: torch.Tensor
+    c_obs: torch.Tensor
+    w: torch.Tensor
+    n_frames: np.ndarray
     log_f0: torch.Tensor
     log_v0: torch.Tensor
     log_cin0: torch.Tensor
-    lo: torch.Tensor           # (B, 8)
+    lo: torch.Tensor
     hi: torch.Tensor
-    theta0: torch.Tensor       # (B, 8) start (plain PDE fit)
-    z: torch.Tensor            # (B, Z) standardised ROI descriptors
+    theta0: torch.Tensor
+    z: torch.Tensor
     cfg: object
 
     def take(self, idx):
@@ -124,7 +124,7 @@ def load_cohort(fit_dirs, pde_root=None, pe_bounds=(0.02, 100.0)):
         TH.append(th0)
     feats = np.array(feats)
     mu, sd = feats.mean(0), feats.std(0) + 1e-9
-    mu[:len(TISSUES)], sd[:len(TISSUES)] = 0.0, 1.0           # keep one-hot as is
+    mu[:len(TISSUES)], sd[:len(TISSUES)] = 0.0, 1.0
     z = torch.as_tensor((feats - mu) / sd, dtype=DTYPE)
     th0 = torch.cat(TH)
     lo, hi = torch.cat(LO), torch.cat(HI)
@@ -153,8 +153,6 @@ class Closure(torch.nn.Module):
                                        torch.nn.Linear(hidden, 2))
         torch.nn.init.zeros_(self.net[-1].weight)
         with torch.no_grad():
-            # two identical tubes are a symmetric saddle (swapping them changes nothing,
-            # so the gradient of the split vanishes): start slightly asymmetric
             self.net[-1].bias.copy_(torch.tensor([0.0, 0.3]))
         self.double()
 

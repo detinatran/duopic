@@ -172,7 +172,6 @@ def main():
                         res[pid] = roc_auc(y[ok], s)
             results[name] = res
             print(f"  {name:48s} AUC {np.nanmean(list(res.values())):.4f}  (n={len(res)})", flush=True)
-    # single maps for reference, on the same patients
     single = {}
     for src in ("oSVD", "DuoPIC"):
         keys = data[common[0]][1][src][0]

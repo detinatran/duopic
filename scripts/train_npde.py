@@ -168,7 +168,6 @@ def main():
         fields["nu"][idx], fields["phi"][idx], fields["cv_npde"][idx], fields["cv_pde"][idx] = nu, phi, cvn, cvp
     print(f"[{cfg.name}] all folds done in {time.time() - t0:.0f}s")
 
-    # fit folders for evaluation
     rows = []
     for pid, fd in zip(pids, fit_dirs):
         b = load_subject(fd)

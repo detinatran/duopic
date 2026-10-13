@@ -8,7 +8,6 @@ import numpy as np
 from scipy.signal import lfilter
 
 
-### (HemoPIC) Two-element Windkessel outflow under constant inflow q_in
 def windkessel_outflow(t, q_in, r, tau, p0):
     tau = float(tau)
     if (not np.isfinite(tau)) or tau <= 0.0:
@@ -17,7 +16,6 @@ def windkessel_outflow(t, q_in, r, tau, p0):
     return q_in + np.multiply(np.subtract(float(p0) / float(r), q_in), e)
 
 
-### (HemoPIC) Single compartment tracer update driven by inflow concentration c_in_t
 def tracer_update(q_out, c_in_t, v_const, q_in, dt, q_floor_ratio, flow_per_minute=False):
     """flow_per_minute=False is the original model: q/V is used as a rate per
     second. [C5] flow_per_minute=True treats q (ml/100g/min) and V (ml/100g)

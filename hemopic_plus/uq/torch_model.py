@@ -20,19 +20,19 @@ NAMES7 = NAMES5 + ["delay", "log_disp"]
 @dataclass
 class RoiBatch:
     """Everything needed to evaluate the objective of B ROIs of one subject."""
-    roi_ids: np.ndarray        # (B,)
-    tissue: list               # (B,) "GM" / "WM" / "CSF" / "BrainStem"
-    c_obs: torch.Tensor        # (B, T) smoothed ROI curves
-    w: torch.Tensor            # (B, T) time weights 0.2 + 0.8 * normalised weight curve
-    shape: torch.Tensor        # (T,) normalised arterial curve (tissue mean or AIF)
-    t: torch.Tensor            # (T,)
+    roi_ids: np.ndarray
+    tissue: list
+    c_obs: torch.Tensor
+    w: torch.Tensor
+    shape: torch.Tensor
+    t: torch.Tensor
     dt: float
-    log_f0: torch.Tensor       # (B,) prior centres
+    log_f0: torch.Tensor
     log_v0: torch.Tensor
     log_cin0: torch.Tensor
-    lo: torch.Tensor           # (B, P) log-space bounds
+    lo: torch.Tensor
     hi: torch.Tensor
-    theta_fit: torch.Tensor    # (B, P) parameters found by the numpy fit
+    theta_fit: torch.Tensor
     cfg: object
 
     @property
@@ -96,7 +96,7 @@ def interp_shift(shape, t, delay):
 
 def disperse(x, dt, tau_d):
     """Exact first-order recursive exponential filter (lfilter with zi=0) on x - x[0]."""
-    a = torch.exp(-dt / tau_d)                 # (N,)
+    a = torch.exp(-dt / tau_d)
     base = x[:, :1]
     u = x - base
     ys = [torch.zeros_like(u[:, 0])]

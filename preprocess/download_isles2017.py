@@ -11,7 +11,7 @@ import urllib.request
 import zipfile
 from pathlib import Path
 
-for _s in (sys.stdout, sys.stderr):  # UTF-8 output for non-ASCII paths on Windows
+for _s in (sys.stdout, sys.stderr):
     try:
         _s.reconfigure(encoding="utf-8", errors="replace")
     except (AttributeError, ValueError):

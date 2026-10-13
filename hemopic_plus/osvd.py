@@ -46,17 +46,17 @@ def osvd_maps(curves, aif, dt, k_h=0.73, rho=1.04, osc_target=0.095,
     tmax = np.full(n_vox, np.nan)
     for s0 in range(0, n_vox, chunk):
         c = curves[s0:s0 + chunk]
-        cpad = np.concatenate([c, np.zeros_like(c)], axis=1).T  # (2T, n)
-        UTc = U.T @ cpad  # (2T, n)
+        cpad = np.concatenate([c, np.zeros_like(c)], axis=1).T
+        UTc = U.T @ cpad
         chosen = np.full(c.shape[0], np.nan)
         arg = np.full(c.shape[0], np.nan)
-        for thr in thresholds:  # increasing truncation until the residue is smooth
+        for thr in thresholds:
             inv = np.where(S >= thr * smax, 1.0 / S, 0.0)
-            k = (Vt.T @ (inv[:, None] * UTc)).T  # (n, 2T)
+            k = (Vt.T @ (inv[:, None] * UTc)).T
             ok = np.isnan(chosen) & (_oscillation(k) <= osc_target)
             chosen[ok] = np.max(k[ok], axis=1)
             arg[ok] = np.argmax(k[ok][:, :T], axis=1)
-        if np.any(np.isnan(chosen)):  # never smooth enough: strongest truncation
+        if np.any(np.isnan(chosen)):
             inv = np.where(S >= thresholds[-1] * smax, 1.0 / S, 0.0)
             k = (Vt.T @ (inv[:, None] * UTc)).T
             rest = np.isnan(chosen)

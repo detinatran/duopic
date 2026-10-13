@@ -32,7 +32,6 @@ def check(fit_dir):
 
 
 if __name__ == "__main__":
-    # pipeline fits only: <name>__ensemble / __pde / __npde ... hold other models' curves
     dirs = sys.argv[1:] or [str(p) for p in sorted((ROOT / "outputs").glob("*/training_22"))
                             if (p / "fit_curves.npz").exists() and "__" not in p.parent.name]
     if not dirs:

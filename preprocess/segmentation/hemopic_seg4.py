@@ -11,8 +11,6 @@ try:
 except Exception as e:
     raise RuntimeError("Need nibabel.processing.resample_from_to") from e
 
-# Copied from HemoPIC (MIT License, LDR Group @ JHU); path helpers inlined so
-# this script does not depend on the original package.
 def hemopic_seg4_dir(patient_dir: Path) -> Path:
     return Path(patient_dir) / "hemopic_seg4"
 
@@ -31,12 +29,6 @@ python preprocess/Segmentation/hemopic_seg4.py \
   /path/to/segmentation_root
 '''
 
-# Build seg4 from structural segmentation. Output labels:
-# 0 background
-# 1 gray matter
-# 2 white matter
-# 3 csf and ventricles
-# 4 brain stem
 
 def seg30_to_seg4(seg30: np.ndarray) -> np.ndarray:
     seg30 = seg30.astype(np.int32)
@@ -63,7 +55,6 @@ def seg30_to_seg4(seg30: np.ndarray) -> np.ndarray:
     return seg4
 
 
-### Simple gray image for quick overlay view
 def seg4_to_gray(seg4: np.ndarray) -> np.ndarray:
     gray = np.zeros(seg4.shape, dtype=np.uint8)
     gray[seg4 == 1] = np.uint8(150)
@@ -93,7 +84,6 @@ def as_int(x) -> int:
     return int(np.asarray(x).reshape(-1)[0])
 
 
-### Save data using ref affine and qform sform codes
 def save_like(ref_img: nib.Nifti1Image, data: np.ndarray, out_path: Path, dtype) -> None:
     hdr = ref_img.header.copy()
     hdr.set_data_dtype(dtype)

@@ -26,7 +26,6 @@ RES = ROOT / "docs" / "results"
 FIG = ROOT / "docs" / "figures"
 MAPS = ("CBF", "CBV", "MTT")
 
-# categorical slots 1-5 of the reference palette (validated: CVD dE >= 9.1 adjacent)
 C = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4"]
 INK, INK2, GRID = "#0b0b0b", "#52514e", "#e4e3df"
 
@@ -165,7 +164,6 @@ def fig_tracer_curves(outputs, data_root):
     from hemopic_plus.io import find_nii, load_nifti, squeeze_ctc
     from hemopic_plus.signal import compute_peak_map, smooth_curve_gaussian
     import json
-    # full / full_idreg / full_*_idvox share the same ROI fits (C8/C9 only change the maps)
     exps = (("baseline", "HemoPIC original"), ("full", "HemoPIC+ (full, same fits as full_idreg)"))
     tr = {int(k): v for k, v in json.loads((ROOT / "configs" / "isles2017_tr.json").read_text()).items()}
     t_grid = np.arange(0, 60.01, 1.0)
@@ -182,7 +180,7 @@ def fig_tracer_curves(outputs, data_root):
             fm = show & (compute_peak_map(ctc, info["baseline_frames"]) > info["aif_peak_threshold"])
             z = np.load(d / "fit_curves.npz")
             curves = {int(r): z["c_fit"][i] for i, r in enumerate(z["roi_ids"]) if z["success"][i]}
-            t = np.arange(ctc.shape[3]) * tr.get(pid, 1.44)  # true TR for every model
+            t = np.arange(ctc.shape[3]) * tr.get(pid, 1.44)
             for reg, m in (("lesion", ot & fm), ("c-lesion", np.flip(ot, 0) & fm)):
                 if m.sum() < 10:
                     continue

@@ -110,7 +110,7 @@ def run_one(args):
         if tissue == "pde":
             pde_refit(cfg, out_dir / subject_id(pid))
         rows, _ = evaluate_subject(cfg.resolve("data_root"), out_dir, pid)
-    except Exception as e:  # a failed patient counts as missing
+    except Exception as e:
         return pid, None, repr(e)
     auc = {r["region"]: r["value"] for r in rows if r["kind"] == "roc" and r["method"] == "model"}
     nrmse = {r["region"]: r["value"] for r in rows if r["kind"] == "tracer"}
@@ -182,7 +182,6 @@ def main():
     ex = ProcessPoolExecutor(max_workers=a.workers or os.cpu_count() or 1)
     study = optuna.create_study(study_name="hemopic_plus", direction="maximize", storage=f"sqlite:///{(od / 'study.db').as_posix()}",
                                 load_if_exists=True, sampler=optuna.samplers.TPESampler(seed=0, multivariate=True, group=True))
-    # the two hand-made configs as starting points
     if len(study.trials) == 0:
         study.enqueue_trial({"k_gm": base.k_gm, "k_wm": base.k_wm, "coord_weight": base.coord_weight,
                              "smooth_sigma_frames": base.smooth_sigma_frames, "lambda_f": base.lambda_f, "lambda_v": base.lambda_v,
@@ -201,7 +200,7 @@ def main():
         tdir = od / "trials" / f"t{trial.number:03d}"
         res = run_set(ex, cfg, tissue, tune, tdir)
         shutil.rmtree(tdir, ignore_errors=True)
-        if len(res) < len(tune):                      # every patient must run, or the trial is not comparable
+        if len(res) < len(tune):
             raise optuna.TrialPruned(f"only {len(res)} of {len(tune)} patients ran")
         s = summary(res)
         for k, v in s.items():
@@ -221,7 +220,6 @@ def main():
         for t in study.trials:
             w.writerow([t.number, t.state.name, t.value, *[t.params.get(k, "") for k in keys], *[t.user_attrs.get(k, "") for k in attrs]])
 
-    # ---- test set: best trials, defaults, oSVD
     done = sorted([t for t in study.trials if t.value is not None], key=lambda t: -t.value)
     cands = {f"best{i + 1} (trial {t.number})": t.params for i, t in enumerate(done[:a.top])}
     by_number = {t.number: t for t in study.trials}

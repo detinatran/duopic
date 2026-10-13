@@ -102,7 +102,7 @@ def semisynth_rows(pb, name, reps, seed):
         pn = pb.subset(range(B))
         pn.c_obs = torch.as_tensor(c_noisy, dtype=DTYPE)
         best, best_obj = None, None
-        for pe in PE_STARTS:                                   # the PDE estimator, started from the priors
+        for pe in PE_STARTS:
             th0 = prior_start(pn)
             th0[:, 7] = float(np.log(pe))
             th0 = torch.minimum(torch.maximum(th0, pn.lo), pn.hi)
@@ -184,7 +184,6 @@ def run_subject(args):
     hrows = heldout_rows(pb, nd.name, folds, draws)
     srows = semisynth_rows(pb, nd.name, reps, pid)
     ens, mrows = member_spread(fit_dir, nd, data_root, pb)
-    # posterior sd of the log quantities, to compare with the member spread
     zp = np.load(nd / "uq" / "posterior.npz")
     for r, i in zip(mrows, range(len(mrows))):
         for q in QTY:

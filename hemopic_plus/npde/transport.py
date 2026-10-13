@@ -58,11 +58,11 @@ def tridiag(log_pe, n, vol=None, dmul=None):
         e = torch.zeros(B, 0, dtype=DTYPE)
         return -1.0 / vol, e, e, vol
     D = torch.exp(-log_pe)[:, None]
-    dface = D * (1.0 if dmul is None else dmul) / (0.5 * (vol[:, 1:] + vol[:, :-1]))   # conductance of face i+1/2
+    dface = D * (1.0 if dmul is None else dmul) / (0.5 * (vol[:, 1:] + vol[:, :-1]))
     pad = torch.zeros(B, 1, dtype=DTYPE)
     diag = -(1.0 + torch.cat([pad, dface], 1) + torch.cat([dface, pad], 1)) / vol
-    up = dface / vol[:, :-1]                                   # A[i, i+1]: dispersion back from cell i+1
-    low = (1.0 + dface) / vol[:, 1:]                           # A[i+1, i]: convection + dispersion into cell i+1
+    up = dface / vol[:, :-1]
+    low = (1.0 + dface) / vol[:, 1:]
     return diag, up, low, vol
 
 
@@ -107,8 +107,8 @@ def modes(diag, up, low, vol):
     off = torch.exp(0.5 * (log_up + log_low))
     Abar = torch.diag_embed(diag) + torch.diag_embed(off, 1) + torch.diag_embed(off, -1)
     lam, Q = torch.linalg.eigh(Abar)
-    beta = Q[:, 0, :] / vol[:, :1]                                      # Q^T S b, s_0 = 1
-    gamma = (vol[:, :, None] * torch.exp(-log_s)[:, :, None] * Q).sum(1)   # vol^T S^-1 Q
+    beta = Q[:, 0, :] / vol[:, :1]
+    gamma = (vol[:, :, None] * torch.exp(-log_s)[:, :, None] * Q).sum(1)
     return lam, gamma * beta
 
 
@@ -124,8 +124,8 @@ def transit_density(log_pe, n, s, vol=None, dmul=None):
     b[:, 0, 0] = 1.0 / vol[:, 0]
     out = []
     for si in s:
-        c = torch.linalg.matrix_exp(float(si) * A) @ b       # cell concentrations after the impulse
-        out.append(c[:, -1, 0])                               # outflow = unit flow x outlet concentration
+        c = torch.linalg.matrix_exp(float(si) * A) @ b
+        out.append(c[:, -1, 0])
     return torch.stack(out, dim=1)
 
 

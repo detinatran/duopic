@@ -67,7 +67,6 @@ def select_aif(ctc, mask3, t, cfg, seed=0):
     if np.sum(good) < 50:
         return None
 
-    ### 1. high-AUC candidates among clean bolus curves, drop the roughest
     cand = good & (auc >= np.quantile(auc[good], 1.0 - float(cfg.aif_auc_top)))
     rough = np.sum(np.diff(d, n=2, axis=1) ** 2, axis=1) / np.maximum(peak, 1e-12) ** 2
     cand &= rough <= np.quantile(rough[cand], 1.0 - float(cfg.aif_rough_drop))
@@ -75,7 +74,6 @@ def select_aif(ctc, mask3, t, cfg, seed=0):
     if idx.size < 10:
         return None
 
-    ### 2. two rounds of shape clustering, keep the earliest cluster
     for rnd in range(2):
         keep = _shape_cluster_earliest(d[idx], t, seed + rnd)
         if np.sum(keep) < 3:
@@ -87,8 +85,6 @@ def select_aif(ctc, mask3, t, cfg, seed=0):
     aif_d = positive_excursion(aif[None, :], cfg.baseline_frames)[0]
     aif_ttp = int(np.argmax(aif_d))
 
-    ### QC: the arterial curve must arrive earlier and be narrower than tissue
-    # reference = mean of all brain voxels (frame-quantised FWHM, so ties pass)
     tissue_d = positive_excursion(raw.mean(axis=0)[None, :], bf)[0]
     aif_m1 = float(_first_moment(aif_d[None, :], t)[0])
     tissue_m1 = float(_first_moment(tissue_d[None, :], t)[0])
@@ -99,7 +95,6 @@ def select_aif(ctc, mask3, t, cfg, seed=0):
     if not (aif_m1 < tissue_m1 and fwhm <= tissue_fwhm and aif_d.max() > 2.0 * tissue_d.max()):
         return None
 
-    ### 3. VOF: highest-peak clean bolus voxels that peak clearly after the AIF
     ttp = np.argmax(d, axis=1)
     vgood = _bolus_quality(raw, d, bf, tail_max=0.6) & (ttp >= aif_ttp + 2)
     vof, scale = None, 1.0

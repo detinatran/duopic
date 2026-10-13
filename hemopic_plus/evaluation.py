@@ -71,7 +71,6 @@ def evaluate_subject(data_root, fit_root, patient_num):
     ot_path = find_nii(base, "OT")
     ot = (load_nifti(ot_path)[1] > 0) if ot_path is not None else np.zeros(sub3.shape, bool)
 
-    ### Tracer reconstruction (same masks and weights as Eval/tracer_recon)
     show = (sub3 > 0) & np.all(np.isfinite(ctc), axis=3)
     fit_mask = show & (compute_peak_map(ctc, bf) > thr)
     if not np.any(fit_mask):
@@ -108,7 +107,6 @@ def evaluate_subject(data_root, fit_root, patient_num):
                 nrmse, nmse = _weighted_errors(c_obs, num / den, w_t, w_mask)
         rows.append({"patient": patient_num, "kind": "tracer", "region": reg, "method": "model", "value": nrmse, "nmse": nmse})
 
-    ### Lesion ROC (same scoring as Eval/lesion_roc, relative to brain median)
     seg_path = base / SEG4_REL
     brain = load_nifti(seg_path)[1] > 0
     pooled = {}

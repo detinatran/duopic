@@ -8,7 +8,6 @@ import numpy as np
 from scipy.ndimage import distance_transform_edt, gaussian_filter1d
 
 
-### (HemoPIC) Gaussian smoothing with baseline removal
 def smooth_curve_gaussian(y, sigma_frames, baseline_frames, clip_nonneg):
     y = np.asarray(y, dtype=np.float64)
     if int(y.size) < 5:
@@ -29,7 +28,6 @@ def smooth_curve_gaussian(y, sigma_frames, baseline_frames, clip_nonneg):
     return ys.astype(np.float64)
 
 
-### (HemoPIC) Median of positive finite values, eps if fewer than 20 samples
 def robust_median_positive(a, eps):
     a = a[np.isfinite(a) & (a > 0.0)]
     if int(a.size) < 20:
@@ -38,7 +36,6 @@ def robust_median_positive(a, eps):
     return float(eps) if v <= 0.0 else v
 
 
-### (HemoPIC) Time weights 0.2 + 0.8 * normalised arterial curve
 def weight_from_aif(a):
     w = a.astype(np.float64).copy()
     w = np.subtract(w, float(np.min(w)))
@@ -48,7 +45,6 @@ def weight_from_aif(a):
     return 0.2 + 0.8 * np.clip(w, 0.0, 1.0)
 
 
-### (HemoPIC) Baseline subtracted peak map
 def compute_peak_map(ctc, baseline_frames):
     t_len = int(ctc.shape[3])
     bf = int(min(int(baseline_frames), t_len))
@@ -60,7 +56,6 @@ def compute_peak_map(ctc, baseline_frames):
     return np.max(d, axis=3).astype(np.float64)
 
 
-### (HemoPIC) Peak threshold p20 + 2% of (p80 - p20)
 def choose_peak_threshold(peak, mask):
     v = peak[mask]
     v = v[np.isfinite(v)]
@@ -80,7 +75,6 @@ def positive_excursion(x, baseline_frames):
     return np.maximum(np.subtract(x, base), 0.0)
 
 
-### (HemoPIC) Voxel CBF texture: peak / (time to peak + dt)
 def voxel_proxy_from_ctc(ctc_vox_t, dt, baseline_frames, eps):
     x = np.where(np.isfinite(ctc_vox_t), ctc_vox_t, 0.0).astype(np.float64)
     n = int(x.shape[0])
@@ -99,7 +93,6 @@ def voxel_auc_from_ctc(ctc_vox_t, dt, baseline_frames):
     return np.sum(positive_excursion(ctc_vox_t, baseline_frames), axis=1) * float(dt)
 
 
-### (HemoPIC) k-means features: peak, TTP, AUC and scaled coordinates, MAD normalised
 def compute_features_for_kmeans(ctc4, coords3, dt, baseline_frames):
     eps = 1.0 / 1e12
     x = ctc4.astype(np.float64)
@@ -124,7 +117,6 @@ def compute_features_for_kmeans(ctc4, coords3, dt, baseline_frames):
     return np.divide(np.subtract(feats, med), scale).astype(np.float32)
 
 
-### (HemoPIC) numpy k-means
 def kmeans_numpy(x, k, seed, max_iter):
     rs = np.random.RandomState(int(seed))
     n = int(x.shape[0])
@@ -154,7 +146,6 @@ def kmeans_numpy(x, k, seed, max_iter):
     return labels.astype(np.int32), cent
 
 
-### (HemoPIC) Merge clusters smaller than min_vox into the nearest large cluster
 def merge_small_clusters(labels, cent, min_vox):
     k = int(cent.shape[0])
     counts = np.bincount(labels, minlength=k).astype(np.int64)
@@ -180,7 +171,6 @@ def merge_small_clusters(labels, cent, min_vox):
     return out.astype(np.int32), cent2
 
 
-### (HemoPIC) Fill unlabeled voxels inside a mask by the nearest label / value
 def fill_nearest(vol3, inside_mask3, valid_mask3):
     holes = inside_mask3 & np.logical_not(valid_mask3)
     if int(np.sum(holes)) < 1 or int(np.sum(valid_mask3)) < 1:

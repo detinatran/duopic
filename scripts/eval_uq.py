@@ -56,7 +56,7 @@ def selective(data_dir, fit_dir, rng):
             continue
         y = ot[ok].astype(np.uint8)
         s = direction * val[ok]
-        u = (hi[ok] - lo[ok]) / val[ok] + 1e-9 * rng.random(int(ok.sum()))     # random tie-break
+        u = (hi[ok] - lo[ok]) / val[ok] + 1e-9 * rng.random(int(ok.sum()))
         order = np.argsort(-u)
         res_u, res_r = [], []
         for q in FRACS:
@@ -97,7 +97,6 @@ def main():
             rr = list(csv.DictReader(f))
         rows += rr
         sel[pid] = selective(data_root / subject_id(pid), fd, rng)
-        # tau per ROI with lesion / contralateral overlap weights
         lab = nib.load(str(fd / "roi_labels_seg4_within_kmeans.nii.gz")).get_fdata().astype(int)
         ot = nib.load(str(find_nii(data_root / subject_id(pid), "OT"))).get_fdata() > 0
         flip = np.flip(ot, axis=0) & ~ot
@@ -109,7 +108,6 @@ def main():
 
     report = {"name": a.name or cfg.name, "n_subjects": len(pids), "n_rois": len(rows)}
 
-    # 1. identifiability
     ident = {}
     for prm in PARAMS:
         if f"{prm}_post_sd" not in rows[0]:
@@ -122,7 +120,6 @@ def main():
                       "prior_dominated_frac": float(np.mean(ratio > 0.9)) if ratio.size else None}
     report["identifiability"] = ident
 
-    # 2. size of the uncertainty
     size = defaultdict(dict)
     for q in ("CBF", "V", "MTT", "tau"):
         for tis in ("GM", "WM", "all"):
@@ -135,7 +132,6 @@ def main():
     report["fit_outside_ci_frac"] = {q: float(np.mean([not (float(r[f"{q}_lo"]) <= float(r[f"{q}_fit"]) <= float(r[f"{q}_hi"]))
                                                         for r in rows])) for q in ("CBF", "V", "MTT")}
 
-    # 3-4. selective prediction and lesion vs contralateral uncertainty
     selrep = {}
     for m in ("CBF", "MTT"):
         au = np.array([s[m]["auc_uncertain_removed"] for s in sel.values() if m in s], dtype=float)
@@ -148,11 +144,10 @@ def main():
                      "frac_patients_lesion_more_uncertain": float(np.nanmean(ul > uc))}
     report["selective"] = selrep
 
-    # 5. tau claim with uncertainty
     if tau_items:
         wl = np.array([t[0] for t in tau_items], float)
         wc = np.array([t[1] for t in tau_items], float)
-        draws = np.stack([t[2] for t in tau_items])                 # (R, D)
+        draws = np.stack([t[2] for t in tau_items])
         tmap = np.array([t[3] for t in tau_items])
         diffs = []
         for j in range(draws.shape[1]):

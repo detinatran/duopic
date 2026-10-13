@@ -14,8 +14,6 @@ from .signal import weight_from_aif
 
 
 def fit_roi_curve(c_obs, cart_norm, t, dt, f_prior, v_prior, cin_prior, cfg, rng=None, w_curve=None):
-    # time weights follow the tissue-mean curve (original); with [C6] the input
-    # curve is the AIF but the weighting is kept unchanged
     w = weight_from_aif(cart_norm if w_curve is None else w_curve)
     eps = 1.0 / 1e12
 
@@ -36,7 +34,6 @@ def fit_roi_curve(c_obs, cart_norm, t, dt, f_prior, v_prior, cin_prior, cfg, rng
     log_r0 = float(np.log(1.0))
     log_f0, log_v0, log_cin0 = float(np.log(f0)), float(np.log(v0)), float(np.log(cin0))
     use_dd = bool(cfg.delay_dispersion)
-    # dispersion prior / start: the narrowest kernel, i.e. "no extra dispersion"
     log_disp0 = float(np.log(max(cfg.dispersion_bounds[0], 1e-3))) if use_dd else 0.0
 
     def simulate(theta):

@@ -49,7 +49,7 @@ MAPS = (("CBF", "low"), ("CBV", "low"), ("MTT", "high"))
 
 
 def auc_map(vol, brain, ot, direction):
-    if direction == "raw":                                   # higher = more likely lesion, any sign
+    if direction == "raw":
         ok = brain & np.isfinite(vol)
         return roc_auc(ot[ok].astype(np.uint8), vol[ok].astype(np.float64)) if ok.any() else np.nan
     valid, score = _lesion_scores(vol, brain, direction)
@@ -109,7 +109,6 @@ def work(args):
             d.mkdir(parents=True, exist_ok=True)
             for k, vol in v.items():
                 save_nifti_like(seg_img, vol, d / f"VOX_{k}.nii.gz")
-    # references on the same voxels
     for src, pat in (("ROI tank", out / name / sub / "HemoPIC_{}.nii.gz"), ("ROI npde", npde_dir / "HemoPIC_{}.nii.gz"),
                      ("oSVD", out / "osvd" / sub / "oSVD_{}.nii.gz")):
         for mname, direction in MAPS:

@@ -18,14 +18,14 @@ import numpy as np  # noqa: E402
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "scripts"))
-from make_figures import C, INK, INK2  # noqa: E402  (shared palette and styling)
+from make_figures import C, INK, INK2  # noqa: E402
 
 FIG = ROOT / "docs" / "figures"
 LABEL = {"baseline": "HemoPIC original", "full": "HemoPIC+ full", "full_aif": "HemoPIC+ full_aif",
          "full__npde": "neural PDE full", "full_aif__npde": "neural PDE full_aif"}
 PARAMS = [("log_R", "R"), ("log_tau", "τ"), ("log_V", "V"), ("log_F", "F"), ("log_Cin", "C_in"), ("delay", "delay"),
           ("log_disp", "dispersion"), ("log_Pe", "Pe")]
-SEQ = ["#2a78d6", "#8fb8ea", "#d7e5f6", "#b9b8b3"]   # learnt, partly, prior-dominated, pinned
+SEQ = ["#2a78d6", "#8fb8ea", "#d7e5f6", "#b9b8b3"]
 PREFIX = "uq_"
 
 
@@ -42,7 +42,7 @@ def fig_identifiability(out, cfgs):
     axes = np.atleast_1d(axes)
     for ax, cfg in zip(axes, cfgs):
         rows = rows_of(out, cfg)
-        y = np.arange(len(PARAMS))[::-1]               # fixed row per parameter so shared labels line up
+        y = np.arange(len(PARAMS))[::-1]
         for j, (p, lab) in enumerate(PARAMS):
             if f"{p}_post_sd" not in rows[0]:
                 ax.text(0.5, y[j], "not in this model", ha="center", va="center", fontsize=7.5, color=INK2)
@@ -332,7 +332,6 @@ def fig_roi_example(out, data_root, cfgs, pid=22):
                 ax.set_ylabel("tracer concentration (a.u.)")
                 if i == 0:
                     ax.legend(fontsize=7, loc="upper left", frameon=False)
-        # posterior of log F, log V of the lesion ROI against the prior
         ax = axes[i, 2]
         k = int(np.where(b.roi_ids == rid_les)[0][0])
         kz = int(np.where(z["roi_ids"] == rid_les)[0][0])

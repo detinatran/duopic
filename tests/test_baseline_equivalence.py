@@ -38,7 +38,6 @@ def test_baseline_matches_bundled_demo():
         for tag in ("CBF", "CBV", "MTT"):
             a = nib.load(str(out / f"HemoPIC_{tag}.nii.gz")).get_fdata()
             b = nib.load(str(DEMO_FIT / f"HemoPIC_{tag}.nii.gz")).get_fdata()
-            # bundled outputs were produced on another machine: allow float noise
             assert np.allclose(a, b, rtol=1e-5, atol=1e-6, equal_nan=True), f"{tag} differs from the original"
 
 

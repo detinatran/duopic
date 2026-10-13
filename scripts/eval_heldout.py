@@ -87,7 +87,7 @@ def heldout_rows(b, name, folds=5, n_draws=400):
                 _, c_fit = simulate(b, theta[None, :], roi_index=[i])
                 r = c_fit[0] - b.c_obs[i]
                 n_train = int((~hide).sum())
-                sigma2 = float((w * r ** 2).sum() / n_train)               # noise variance at weight 1
+                sigma2 = float((w * r ** 2).sum() / n_train)
                 den = float((w * b.c_obs[i] ** 2).mean()) + 1e-12
                 num = float((w * r ** 2).mean())
                 kappa = LP.n_eff(b) * (n_train / T) * den / (2.0 * max(num, 1e-30))

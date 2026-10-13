@@ -33,19 +33,18 @@ def check(fit_dir):
     g = torch.Generator().manual_seed(0)
     th7 = b.theta_fit.clone()
     with torch.no_grad():
-        _, c_ref = simulate(b, th7)                                     # HemoPIC+ (tank + input kernel)
+        _, c_ref = simulate(b, th7)
         scale = c_ref.abs().max()
         e1 = float((TP.simulate(b, with_pe(th7, 3.0), n_cells=1)[1] - c_ref).abs().max() / scale)
         e2 = float((TP.simulate(b, with_pe(th7, np.log(1e-5)), n_cells=24)[1] - c_ref).abs().max() / scale)
 
-        # 3. steady state under a constant inlet and a fast Windkessel
         b2 = b.subset(range(B))
         b2.shape = torch.ones_like(b.shape)
         th = with_pe(th7, np.log(5.0))
         th[:, 1] = b.lo[:, 1]
         target = None
         e3 = 0.0
-        nu = torch.rand(B, 3, generator=g, dtype=DTYPE) + 1.0          # moderate rate ratios: settles in the window
+        nu = torch.rand(B, 3, generator=g, dtype=DTYPE) + 1.0
         phi = torch.rand(B, 3, generator=g, dtype=DTYPE) + 1.0
         vol = torch.rand(B, 16, generator=g, dtype=DTYPE) + 0.2
         for kw in ({}, {"paths": (nu / nu.sum(1, keepdim=True), phi / phi.sum(1, keepdim=True))},
@@ -55,7 +54,6 @@ def check(fit_dir):
                 target = torch.exp(th[:, 3]) / q[:, -1] * torch.exp(th[:, 4])
             e3 = max(e3, float(((c[:, -1] - target).abs() / target).max()))
 
-        # 4. modal solver vs matrix exponential
         from hemopic_plus.uq.torch_model import interp_shift
         vol24 = torch.rand(B, 24, generator=g, dtype=DTYPE) + 0.2
         vol24 = vol24 / vol24.sum(1, keepdim=True)
@@ -70,7 +68,6 @@ def check(fit_dir):
                 new = TP.advance(kdt, u, *TP.tridiag(th[:, 7], 24, v, d))
                 e4 = max(e4, float((new - ref).abs().max() / ref.abs().max()))
 
-        # 5. transit-time densities
         s = np.linspace(0.0, 30.0, 3001)
         lp = torch.tensor([1.0], dtype=DTYPE)
         hs = [TP.transit_density(lp, 24, s)[0], TP.transit_density(lp, 24, s, vol24[:1], dm24[:1])[0],
@@ -83,7 +80,7 @@ def check(fit_dir):
             e5 = max(e5, abs(area - 1), abs(np.trapezoid(h * s, s) / area - 1))
     assert e1 < 1e-10, e1
     assert e2 < 1e-4, e2
-    assert e3 < 5e-3, e3                           # not fully settled at the end of a short window
+    assert e3 < 5e-3, e3
     assert e4 < 1e-6, e4
     assert e5 < 2e-3, e5
     return e1, e2, e3, e4, e5

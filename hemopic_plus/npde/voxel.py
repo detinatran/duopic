@@ -52,7 +52,7 @@ def tissue_modes(kdt, u, lam, wgt, nu, phi):
     kdt, u: (B, T); nu, phi: (M,) volume and flow fractions. Same recursion as
     transport.advance with tube m running at rate k phi_m / nu_m."""
     B, T = kdt.shape
-    kk = kdt[:, None, :] * (phi / nu)[None, :, None]                    # (B, M, T)
+    kk = kdt[:, None, :] * (phi / nu)[None, :, None]
     g = wgt / lam
     y = torch.zeros(B, nu.shape[0], lam.shape[0], dtype=DTYPE)
     out = [torch.zeros(B, dtype=DTYPE)]
@@ -75,10 +75,9 @@ class RoiModel:
         self.lam, self.wgt = roi_modes(self.theta[7], n_cells)
         self.nu = torch.ones(1, dtype=DTYPE) if nu is None else torch.as_tensor(nu, dtype=DTYPE)
         self.phi = torch.ones(1, dtype=DTYPE) if phi is None else torch.as_tensor(phi, dtype=DTYPE)
-        # the input filter exp(-t/tau_d) is the identity to 1e-12 when tau_d << dt (dispersion at its lower bound)
         self.disperse = float(np.exp(-self.dt / float(torch.exp(self.theta[6])))) > 1e-12
 
-    FREE = (2, 4, 5)                                     # log V, log Cin, delay
+    FREE = (2, 4, 5)
 
     def full_theta(self, x):
         """x (B, 3) = (log V, log Cin, delay) -> (B, 8)."""
@@ -138,7 +137,7 @@ def fit_voxels(model, c, w, lam_v=0.02, lam_c=0.02, lam_d=0.002, den_floor=0.05,
             sw = torch.sqrt(w[None, :] / (T * torch.clamp((w[None, :] * cc ** 2).mean(dim=1, keepdim=True), min=floor)))
             x = centre[None, :].repeat(n, 1)
             best = torch.full((n,), float("inf"), dtype=DTYPE)
-            for d in grid:                                              # delay start
+            for d in grid:
                 xd = x.clone()
                 xd[:, 2] = d
                 L = (resid(xd, cc, sw)[0] ** 2).sum(dim=1)
@@ -155,7 +154,7 @@ def fit_voxels(model, c, w, lam_v=0.02, lam_c=0.02, lam_d=0.002, den_floor=0.05,
                     break
                 xa, ra, ca, swa = x[ia], r[ia], cc[ia], sw[ia]
                 J = torch.stack([(resid(xa + h[k] * torch.eye(3, dtype=DTYPE)[k], ca, swa)[0] - ra) / h[k]
-                                 for k in range(3)], dim=2)                      # (na, T + 3, 3)
+                                 for k in range(3)], dim=2)
                 JTJ = J.transpose(1, 2) @ J
                 g = (J.transpose(1, 2) @ ra[:, :, None])[:, :, 0]
                 A = JTJ + mu[ia, None, None] * torch.diag_embed(torch.diagonal(JTJ, dim1=1, dim2=2) + 1e-9)

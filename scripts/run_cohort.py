@@ -14,7 +14,6 @@ import time
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
 
-# one BLAS thread per worker; parallelism comes from the process pool
 for _v in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS", "VECLIB_MAXIMUM_THREADS"):
     os.environ.setdefault(_v, "1")
 
@@ -32,7 +31,7 @@ def _work(args):
         res = run_subject(cfg, pid, out_root)
         res["seconds"] = round(time.time() - t0, 1)
         return res
-    except Exception as e:  # keep the cohort running, report at the end
+    except Exception as e:
         return {"patient": pid, "error": repr(e)}
 
 

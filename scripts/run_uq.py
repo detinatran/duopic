@@ -36,7 +36,7 @@ from hemopic_plus.uq import mcmc as MC  # noqa: E402
 from hemopic_plus.uq.data import load_subject  # noqa: E402
 from hemopic_plus.uq.torch_model import derived  # noqa: E402
 
-MAP_DRAWS = 200  # posterior draws used for the voxel maps
+MAP_DRAWS = 200
 
 
 def voxel_maps(fit_dir, batch, d_fit, d_samp, out):
@@ -60,7 +60,7 @@ def voxel_maps(fit_dir, batch, d_fit, d_samp, out):
             continue
         S = d_samp["CBF"].shape[1]
         pick = rng.choice(S, size=min(MAP_DRAWS, S), replace=False)
-        rf = (d_samp["CBF"][i, pick] / d_fit["CBF"][i]).astype(np.float32)          # (D,)
+        rf = (d_samp["CBF"][i, pick] / d_fit["CBF"][i]).astype(np.float32)
         rv = (d_samp["V"][i, pick] / d_fit["V"][i]).astype(np.float32) if scale_cbv else np.ones_like(rf)
         f_vox = cbf[m].astype(np.float32)[:, None] * rf[None, :]
         v_vox = cbv[m].astype(np.float32)[:, None] * rv[None, :]

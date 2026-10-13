@@ -43,7 +43,7 @@ from hemopic_plus.uq.data import load_subject  # noqa: E402
 from hemopic_plus.uq.torch_model import DTYPE, derived, simulate  # noqa: E402
 from hemopic_plus.uq.torch_model import objective as tank_objective  # noqa: E402
 
-PE_STARTS = (0.02, 0.3, 3.0, 30.0)   # 0.02 ~ the HemoPIC+ tank, so the PDE never fits worse
+PE_STARTS = (0.02, 0.3, 3.0, 30.0)
 
 
 def fit_pde(b, theta0, n_cells, maxiter=300, paths=None):
@@ -132,17 +132,15 @@ def run_subject(args):
     cfg = b.cfg
     with torch.no_grad():
         ref = {k: v.numpy() for k, v in derived(b, b.theta_fit).items()}
-    # 1. tank, polished
     th_pol = LP.refine_map(b)
     with torch.no_grad():
         _, c_pol = simulate(b, th_pol)
         d_pol = {k: v.numpy() for k, v in derived(b, th_pol).items()}
         obj_tank = tank_objective(b, th_pol)[0].numpy()
-    # 2. PDE, started from the polished tank
     th_pde, obj_pde = fit_pde(b, th_pol, n_cells)
     with torch.no_grad():
         _, c_pde = TP.simulate(b, th_pde, n_cells)
-        d_pde = {k: v.numpy() for k, v in derived(b, th_pde[:, :7]).items()}   # the outflow does not depend on the tissue model
+        d_pde = {k: v.numpy() for k, v in derived(b, th_pde[:, :7]).items()}
         def nm(c):
             return ((b.w * (c - b.c_obs) ** 2).mean(1) / (b.w * b.c_obs ** 2).mean(1)).numpy()
         data_pol, data_pde = nm(c_pol), nm(c_pde)
@@ -234,7 +232,6 @@ def main():
                    "frac_pde_better": float(np.mean(gain > 0)),
                    **{f"{q}_rel_change_median": float(np.median([abs(r[f"{q}_pde"] / r[f"{q}_tank"] - 1) for r in rows]))
                       for q in ("CBF", "V", "MTT", "tau")}}
-    # paired per-patient differences pde - tank_polished
     paired = {}
     for key in [("tracer", reg) for reg in REGIONS] + [("roc", m) for m, _ in MAPS]:
         d = [per["pde"].get((pid, *key), np.nan) - per["tank_polished"].get((pid, *key), np.nan) for pid in pids_ok]

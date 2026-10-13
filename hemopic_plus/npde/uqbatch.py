@@ -71,7 +71,6 @@ class PDEBatch:
         return data + TP.priors(self.cfg, theta, self.log_f0[idx], self.log_v0[idx], self.log_cin0[idx]), data, num, den
 
     def pde_derived(self, theta):
-        # the outflow (hence CBF, V, MTT, tau) does not depend on the tissue model
         return tank_derived(self.b, theta[:, :7])
 
 

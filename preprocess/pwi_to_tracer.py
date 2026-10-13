@@ -11,7 +11,6 @@ Run:
 python preprocess/signal_to_concentration/pwi_to_tracer.py /path/to/ISLES2017_Training 1 48
 """
 
-# Parse a positive float, else fall back to default
 def _as_float(x, default_value):
     try:
         v = float(x)
@@ -21,14 +20,12 @@ def _as_float(x, default_value):
         pass
     return float(default_value)
 
-# Parse an int, else fall back to default
 def _as_int(x, default_value):
     try:
         return int(x)
     except Exception:
         return int(default_value)
 
-# Accept 4D input, or squeeze singleton axes from 5D input into 4D
 def _squeeze_to_4d(arr):
     a = np.asanyarray(arr)
     if int(a.ndim) == 4:
@@ -41,7 +38,6 @@ def _squeeze_to_4d(arr):
                 return a2
     raise RuntimeError("MR_4DPWI array is not 4D after squeezing")
 
-# Estimate baseline S0 and bolus arrival time index from global mean signal
 def _estimate_s0_and_bat(signal4, s0_threshold):
     t_len = int(signal4.shape[3])
 
@@ -76,7 +72,6 @@ def _estimate_s0_and_bat(signal4, s0_threshold):
     s0 = np.mean(signal4[..., : int(bat)], axis=3).astype(np.float64)
     return s0, int(bat), int(ttp)
 
-# Convert signal S into tracer proportional to log(S0 / S)
 def _tracer_from_pwi(signal4, te_seconds, s0_threshold):
     x = signal4.astype(np.float64, copy=False)
     x = np.where(np.isfinite(x), x, 1.0)
@@ -95,7 +90,6 @@ def _tracer_from_pwi(signal4, te_seconds, s0_threshold):
     info = {"bat_index": int(bat), "ttp_index": int(ttp)}
     return tracer, info
 
-# Support nii and nii.gz
 def _find_pwi_path(subject_dir):
     p1 = Path(subject_dir) / "MR_4DPWI.nii"
     if p1.exists():
@@ -105,7 +99,6 @@ def _find_pwi_path(subject_dir):
         return p2
     return None
 
-# Decide whether input is a file, a subject folder, or a training root folder
 def _collect_subject_dirs(input_path):
     p = Path(input_path)
     if p.is_file():
@@ -118,7 +111,6 @@ def _collect_subject_dirs(input_path):
     dirs = [d for d in sorted(p.glob("training_*")) if d.is_dir()]
     return dirs, False
 
-# Fast integrity check for an existing output file
 def _output_ok(out_path):
     try:
         img = nib.load(str(out_path))
@@ -127,7 +119,6 @@ def _output_ok(out_path):
     except Exception:
         return False
 
-# Write tracer into the subject folder
 def _write_tracer_for_subject(subject_dir, te_seconds, dt_seconds, s0_threshold, overwrite):
     subject_dir = Path(subject_dir)
     pwi_path = _find_pwi_path(subject_dir)
@@ -171,8 +162,6 @@ def _write_tracer_for_subject(subject_dir, te_seconds, dt_seconds, s0_threshold,
     out_img = nib.Nifti1Image(tracer, affine=img.affine, header=hdr)
     nib.save(out_img, str(out_path))
 
-# Single mode: input is a subject folder or a pwi file
-# Root mode: input is a training root folder
 def main(argv):
     if int(len(argv)) < 2:
         env_root = os.environ.get("ISLES2017_TRAINING_ROOT", "")

@@ -101,8 +101,6 @@ def _indicator_dilution(cfg, rois, cart_smooth, dt, absolute=False):
         return float(ref) / max(med, 1e-12)
 
     if absolute:
-        # [C6] indicator dilution in absolute units with a true AIF:
-        # CBV [ml/100g] = 100 kH/rho * AUC(C)/AUC(AIF); CBF [ml/100g/min] = same factor * 60 * max slope / max AIF
         kf = kv = 100.0 * float(cfg.k_h) / float(cfg.rho_brain)
     else:
         kf, kv = calib("cbf_raw", cfg.ref_wm_cbf), calib("cbv_raw", cfg.ref_wm_cbv)
@@ -134,8 +132,6 @@ def run_subject(cfg, patient_num: int, out_root: Path):
     if not seg_path.exists():
         raise FileNotFoundError("Missing seg4 file " + str(seg_path))
 
-    # MR_rCBF is always read for its geometry (affine/header of the output maps);
-    # its values are only used when prior_source / map_bounds = reference_maps.
     cbf_img, cbf3 = load_nifti(paths["MR_rCBF"])
     _, cbv3 = load_nifti(paths["MR_rCBV"])
     _, mtt3 = load_nifti(paths["MR_MTT"])
@@ -163,9 +159,8 @@ def run_subject(cfg, patient_num: int, out_root: Path):
     cart_smooth = smooth_curve_gaussian(ctc[fit_mask3].mean(axis=0).astype(np.float64), sigma_frames=cfg.smooth_sigma_frames,
                                         baseline_frames=cfg.baseline_frames, clip_nonneg=cfg.clip_nonneg)
     cart_norm = (cart_smooth / float(max(float(np.max(cart_smooth)), 1.0 / 1e12))).astype(np.float64)
-    w_curve = cart_norm  # time weights always follow the tissue-mean curve
+    w_curve = cart_norm
 
-    ### [C6] replace the tissue-mean proxy by an automatically selected AIF
     aif_info = None
     if cfg.arterial_input == "auto_aif":
         res = select_aif(ctc, show_mask3, t, cfg, seed=int(cfg.seed) + patient_num)
@@ -180,7 +175,6 @@ def run_subject(cfg, patient_num: int, out_root: Path):
     unlabeled = int(np.sum(show_mask3 & (sub3 == 0)))
     save_nifti_like(cbf_img, sub3.astype(np.int32), fit_dir / "roi_labels_seg4_within_kmeans.nii.gz", dtype=np.int32)
 
-    ### Collect ROI curves first so priors can be calibrated across ROIs
     rois = []
     for roi_id in gm_ids + wm_ids + [csf_id, bs_id]:
         sel_all = sub3 == int(roi_id)
@@ -207,7 +201,6 @@ def run_subject(cfg, patient_num: int, out_root: Path):
     else:
         calib = _tracer_priors(cfg, rois, cart_smooth, dt, absolute=use_abs)
 
-    ### Fit each ROI
     rng = np.random.default_rng(int(cfg.seed) + 1000 * patient_num)
     fits, rows = {}, []
     for r in rois:
@@ -235,7 +228,6 @@ def run_subject(cfg, patient_num: int, out_root: Path):
                         c_obs=np.stack([r["c_smooth"] for r in rois]) if rois else np.zeros((0, t_len)),
                         c_fit=np.stack([fits[r["roi_id"]]["C_fit"] for r in rois]) if rois else np.zeros((0, t_len)))
 
-    ### Voxel maps
     art_d = positive_excursion(cart_smooth[None, :], cfg.baseline_frames)[0]
     art_m1 = float(np.sum(art_d * t) / max(np.sum(art_d), 1e-12))
     shape3 = seg4.shape
@@ -255,10 +247,8 @@ def run_subject(cfg, patient_num: int, out_root: Path):
         q_mean = float(max(float(fit["F"]) if q_tail.size < 1 else float(np.mean(q_tail)), cfg.eps_small))
         v_roi = float(max(float(fit["V"]), cfg.eps_small))
         if cfg.cbv_source == "id_regional":
-            # [C8] regional CBV by indicator dilution instead of the fitted V
             v_roi = float(cbv_id[int(roi_id)])
         if cfg.cbv_source == "id_voxel":
-            # [C8] voxel CBV by indicator dilution, k_cbv * AUC(voxel) / AUC(arterial), as in oSVD
             md_cbv[sel_all] = calib[1] * voxel_auc_from_ctc(ctc[sel_all].astype(np.float64), dt=dt,
                                                             baseline_frames=cfg.baseline_frames) / calib[2]
         if roi_id in (csf_id, bs_id):
@@ -271,14 +261,12 @@ def run_subject(cfg, patient_num: int, out_root: Path):
         if cfg.cbf_texture == "peak_ttp":
             proxy, _ = voxel_proxy_from_ctc(ctc_roi, dt=dt, baseline_frames=cfg.baseline_frames, eps=cfg.eps_small)
         elif cfg.cbf_texture == "moment":
-            # [C9] CBF = CBV / MTT with MTT = first-moment difference (central volume theorem)
             d_roi = positive_excursion(ctc_roi, cfg.baseline_frames)
             auc_v = np.sum(d_roi, axis=1)
             m1 = np.sum(d_roi * t[None, :], axis=1) / np.maximum(auc_v, 1e-12)
             mtt_v = np.clip(m1 - art_m1, cfg.moment_mtt_bounds[0], cfg.moment_mtt_bounds[1])
             proxy = np.where(auc_v > 0, auc_v / mtt_v, 0.0)
         else:
-            # [C9] voxel CBF from oSVD with the same arterial curve
             proxy, _, _ = osvd_maps(positive_excursion(ctc_roi, cfg.baseline_frames), art_d, dt)
             proxy = np.where(np.isfinite(proxy), proxy, 0.0)
         proxy_ratio = np.ones(n_all, dtype=np.float64)
@@ -315,7 +303,6 @@ def run_subject(cfg, patient_num: int, out_root: Path):
     md_cbf = np.where(show_mask3, md_cbf, np.nan)
     md_cbv = np.where(show_mask3, md_cbv, np.nan)
 
-    ### MTT = 60 CBV / CBF with floors/caps
     if cfg.map_bounds == "reference_maps":
         gt_cbf, gt_mtt = cbf3.astype(np.float64), mtt3.astype(np.float64)
         m_cbf = show_mask3 & np.isfinite(gt_cbf) & (gt_cbf > 0.0)

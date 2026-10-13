@@ -17,8 +17,6 @@ def _logpost(batch, theta, roi_index, kappa_rows):
     lo = batch.lo[roi_index]
     hi = batch.hi[roi_index]
     inside = ((theta >= lo) & (theta <= hi)).all(dim=1)
-    # proposals outside the bounds are rejected anyway; evaluating them clamped
-    # keeps the model away from degenerate values (e.g. a huge Peclet number)
     val = objective(batch, torch.minimum(torch.maximum(theta, lo), hi), roi_index=roi_index)[0]
     lp = -kappa_rows * val
     return torch.where(inside & torch.isfinite(lp), lp, torch.full_like(lp, -np.inf))
@@ -40,9 +38,8 @@ def run(batch, theta0, cov, pinned, kappa, chains=4, n_burn=2000, n_keep=4000, t
     for i in range(B):
         for k in torch.where(pinned[i])[0]:
             C[i, k, k] = (0.05 * width[i, k]) ** 2
-    L = _chol(C, P)                                         # (B,P,P)
+    L = _chol(C, P)
     scale = torch.full((B,), 2.38 / np.sqrt(P), dtype=DTYPE)
-    # start chains around the mode
     jitter = torch.randn(B * chains, P, generator=g, dtype=DTYPE)
     x = theta0[roi_index] + 0.1 * torch.einsum("npq,nq->np", L[roi_index], jitter)
     x = torch.minimum(torch.maximum(x, batch.lo[roi_index]), batch.hi[roi_index])
@@ -79,7 +76,7 @@ def run(batch, theta0, cov, pinned, kappa, chains=4, n_burn=2000, n_keep=4000, t
                 acc_total += acc_rows
                 if (step - n_burn) % thin == 0:
                     keep.append(x.reshape(B, chains, P).clone())
-    samples = torch.stack(keep, dim=2)                      # (B, chains, S, P)
+    samples = torch.stack(keep, dim=2)
     return samples, acc_total / n_keep
 
 
@@ -87,14 +84,13 @@ def rhat_ess(samples):
     """Split-R-hat and a simple bulk ESS per ROI and parameter. samples: (B,C,S,P)."""
     B, C, S, P = samples.shape
     h = S // 2
-    sp = torch.cat([samples[:, :, :h], samples[:, :, h:2 * h]], dim=1)   # (B, 2C, h, P)
+    sp = torch.cat([samples[:, :, :h], samples[:, :, h:2 * h]], dim=1)
     chain_mean = sp.mean(dim=2)
     chain_var = sp.var(dim=2, unbiased=True)
     W = chain_var.mean(dim=1)
     Bv = h * chain_mean.var(dim=1, unbiased=True)
     var_hat = (h - 1) / h * W + Bv / h
     rhat = torch.sqrt(var_hat / torch.clamp(W, min=1e-30))
-    # ESS from the autocorrelation of the pooled chains (Geyer initial positive sequence, truncated)
     x = samples - samples.mean(dim=2, keepdim=True)
     var = (x ** 2).mean(dim=2)
     ess = torch.empty(B, P, dtype=DTYPE)

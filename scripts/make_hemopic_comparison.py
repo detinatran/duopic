@@ -84,7 +84,6 @@ def main():
     stats["mean"] = {"diff": float(dm.mean()), "p": float(wilcoxon(dm).pvalue), "n_better": int((dm > 0).sum())}
     (RES / "hemopic_vs_duopic.json").write_text(json.dumps(stats, indent=2), encoding="utf8")
 
-    # maps of one patient (display orientation as the other map figures)
     sub = f"training_{a.patient}"
     base = data_root / sub
     canon = lambda v, ref: nib.as_closest_canonical(nib.Nifti1Image(v, nib.load(str(ref)).affine)).get_fdata()  # noqa: E731
@@ -98,7 +97,6 @@ def main():
     o2 = ot[:, :, z][crop].T.astype(float)
     groups = [("HemoPIC [4]", hemopic(out, sub), hem[a.patient]), ("DuoPIC-vox", duopic_vox(out, sub), vox[a.patient])]
 
-    # figure 1: maps (full text width)
     fig = plt.figure(figsize=(7.0, 1.22))
     gs = fig.add_gridspec(1, 9, width_ratios=[1, 1, 1, 0.35, 1, 1, 1, 0.12, 0.08], wspace=0.05,
                           left=0.01, right=0.955, bottom=0.13, top=0.79)
@@ -135,7 +133,6 @@ def main():
     fig.savefig(FIG / "hemopic_vs_duopic_maps.png", dpi=400)
     plt.close(fig)
 
-    # figure 2: lesion AUC of every patient (one column)
     fig, axes = plt.subplots(1, 3, figsize=(3.35, 1.3), sharex=True, sharey=True)
     for k, (m, _) in enumerate(MAPS):
         ax = axes[k]

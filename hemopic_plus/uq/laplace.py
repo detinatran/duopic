@@ -64,7 +64,7 @@ def prior_sd(batch, kappa):
     if P >= 7:
         lam += [cfg.lambda_delay, cfg.lambda_dispersion]
     if P == 8:
-        lam += [0.0]                                     # log Pe of the transport PDE: no penalty
+        lam += [0.0]
     out = torch.empty(B, P, dtype=DTYPE)
     for k, lam_k in enumerate(lam):
         if lam_k > 0:

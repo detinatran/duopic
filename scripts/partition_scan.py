@@ -61,7 +61,7 @@ def main():
 
     f_pp = od / "per_patient.csv"
     done = {}
-    if f_pp.exists():                                    # resume
+    if f_pp.exists():
         for r in csv.DictReader(open(f_pp, encoding="utf8")):
             done.setdefault(r["point"], {})[int(r["patient"])] = {m: float(r[f"AUC_{m}"]) for m in MAP_NAMES}
     bases = {}
@@ -69,7 +69,7 @@ def main():
         params = json.loads((out / "optuna_cv" / f"fold{k}" / "test.json").read_text(encoding="utf8"))["tuning_best"]["params"]
         bases[k] = config_from_params(base, params)[0]
     grid = [(f, kg, kw, t) for f in bases for t in a.tissue for kg in a.k_gm for kw in a.k_wm]
-    for f, b in bases.items():                         # the fold's own Optuna choice is always a candidate
+    for f, b in bases.items():
         if (f, b.k_gm, b.k_wm, "tank") not in grid:
             grid.append((f, b.k_gm, b.k_wm, "tank"))
     ex = ProcessPoolExecutor(max_workers=a.workers)

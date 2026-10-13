@@ -60,7 +60,6 @@ def run_subject(args):
             c_noisy[i] = c_true[i].numpy() + e
         bn = b.subset(range(len(b.roi_ids)))
         bn.c_obs = torch.as_tensor(c_noisy, dtype=DTYPE)
-        # the pipeline's own estimator, started from the pipeline's priors
         refit = []
         for i in range(len(b.roi_ids)):
             fr = fit_roi_curve(c_noisy[i], shape_np, t, dt, float(torch.exp(b.log_f0[i])), float(torch.exp(b.log_v0[i])),
