@@ -3,13 +3,15 @@
 python scripts/smooth_external.py <ISLES2024_Training> <ISLES2024_Training_s3> [--sigma 3] [--workers 12]
 
 CT perfusion is much noisier per voxel than the MR set. Every subject folder is
-copied as links except the tracer concentration, which is smoothed within the
+copied as links (as files where links are not supported, e.g. Google Drive)
+except the tracer concentration, which is smoothed within the
 brain mask (seg4 > 0) by a Gaussian of --sigma voxels in the slice plane
 (normalised convolution, no smoothing across slices or in time). Every method is
 then run on the smoothed copy, so all of them see the same input.
 """
 import argparse
 import os
+import shutil
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
@@ -26,7 +28,13 @@ def work(args):
     out.mkdir(parents=True, exist_ok=True)
     for f in src.iterdir():
         if f.name != CTC and not (out / f.name).exists():
-            os.symlink(f.resolve(), out / f.name)
+            try:
+                os.symlink(f.resolve(), out / f.name)
+            except OSError:
+                if f.is_dir():
+                    shutil.copytree(f, out / f.name, dirs_exist_ok=True)
+                else:
+                    shutil.copy2(f, out / f.name)
     if (out / CTC).exists():
         return src.name
     img = nib.load(str(src / CTC))

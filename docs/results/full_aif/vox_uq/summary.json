@@ -1,0 +1,135 @@
+{
+  "n_patients": 43,
+  "n_voxels": 129000,
+  "all": {
+    "n": 108075,
+    "MTT ci95 rel width, voxel part, dof0": 1.3301116857135398,
+    "MTT ci95 rel width, voxel part, dof3": 1.6342042769679435,
+    "MTT ci95 rel width, ROI part": 0.49164618216492206,
+    "MTT ci95 rel width, total, dof3": 1.8161826558041576,
+    "share of variance from the ROI, dof3": 0.11332646383314703,
+    "posterior/prior sd of log V, median, dof3": 0.6230363135789293,
+    "fraction data-determined (ratio < 0.5), dof3": 0.3000231320842008,
+    "fraction prior-dominated (ratio > 0.9), dof3": 0.18836918806384456
+  },
+  "GM": {
+    "n": 45589,
+    "MTT ci95 rel width, voxel part, dof0": 1.5460909309326007,
+    "MTT ci95 rel width, voxel part, dof3": 1.873687858671254,
+    "MTT ci95 rel width, ROI part": 0.6271702470496913,
+    "MTT ci95 rel width, total, dof3": 2.2256177760641838,
+    "share of variance from the ROI, dof3": 0.13569761681509343,
+    "posterior/prior sd of log V, median, dof3": 0.7228109771323091,
+    "fraction data-determined (ratio < 0.5), dof3": 0.19941213889315404,
+    "fraction prior-dominated (ratio > 0.9), dof3": 0.29230735484437037
+  },
+  "WM": {
+    "n": 30022,
+    "MTT ci95 rel width, voxel part, dof0": 1.2202406734546398,
+    "MTT ci95 rel width, voxel part, dof3": 1.4936890605360547,
+    "MTT ci95 rel width, ROI part": 0.4786834129705315,
+    "MTT ci95 rel width, total, dof3": 1.614776042510746,
+    "share of variance from the ROI, dof3": 0.11185623553234553,
+    "posterior/prior sd of log V, median, dof3": 0.6350428458867243,
+    "fraction data-determined (ratio < 0.5), dof3": 0.26613816534541335,
+    "fraction prior-dominated (ratio > 0.9), dof3": 0.1692758643661315
+  },
+  "lesion": {
+    "n": 32464,
+    "MTT ci95 rel width, voxel part, dof0": 1.2102676958730156,
+    "MTT ci95 rel width, voxel part, dof3": 1.5162482169622646,
+    "MTT ci95 rel width, ROI part": 0.3910350373990318,
+    "MTT ci95 rel width, total, dof3": 1.6332797021413834,
+    "share of variance from the ROI, dof3": 0.08417831810230622,
+    "posterior/prior sd of log V, median, dof3": 0.5141544207233121,
+    "fraction data-determined (ratio < 0.5), dof3": 0.47264662395268603,
+    "fraction prior-dominated (ratio > 0.9), dof3": 0.060066535239034005
+  },
+  "checks": {
+    "heldout 0.50 dof0": {
+      "all": 0.5482410529715761,
+      "GM": 0.581695040130424,
+      "WM": 0.5793594125838714,
+      "lesion": 0.5305467505494728
+    },
+    "heldout 0.50 dof3": {
+      "all": 0.6175693475452196,
+      "GM": 0.6421797404063204,
+      "WM": 0.6427484491707811,
+      "lesion": 0.6045616820922307
+    },
+    "heldout 0.80 dof0": {
+      "all": 0.7374783591731265,
+      "GM": 0.7628622711311762,
+      "WM": 0.7644958222559818,
+      "lesion": 0.723568598390902
+    },
+    "heldout 0.80 dof3": {
+      "all": 0.8139075581395349,
+      "GM": 0.8270809819413092,
+      "WM": 0.8285045575389289,
+      "lesion": 0.8073502308793579
+    },
+    "heldout 0.95 dof0": {
+      "all": 0.8523935077519379,
+      "GM": 0.8650655254577376,
+      "WM": 0.8680228509937966,
+      "lesion": 0.8453361361482468
+    },
+    "heldout 0.95 dof3": {
+      "all": 0.9095617571059431,
+      "GM": 0.9113241472284926,
+      "WM": 0.9141767945309534,
+      "lesion": 0.9087703909825983
+    },
+    "semisynth delay dof0": {
+      "all": 0.8971705426356589,
+      "GM": 0.9441309255079007,
+      "WM": 0.9388530193695405,
+      "lesion": 0.8728449579577763
+    },
+    "semisynth delay dof3": {
+      "all": 0.9405426356589147,
+      "GM": 0.9685854025583145,
+      "WM": 0.9661982529434106,
+      "lesion": 0.9261387695844172
+    },
+    "semisynth logCin dof0": {
+      "all": 0.8337984496124031,
+      "GM": 0.8201655379984951,
+      "WM": 0.8142802886441322,
+      "lesion": 0.8438690944286492
+    },
+    "semisynth logCin dof3": {
+      "all": 0.8955426356589147,
+      "GM": 0.8799849510910459,
+      "WM": 0.8788454234713254,
+      "lesion": 0.9062367672857057
+    },
+    "semisynth logV dof0": {
+      "all": 0.8883720930232558,
+      "GM": 0.9155379984951091,
+      "WM": 0.9073300417774401,
+      "lesion": 0.8782287822878229
+    },
+    "semisynth logV dof3": {
+      "all": 0.9352713178294574,
+      "GM": 0.9522197140707299,
+      "WM": 0.9468287124952526,
+      "lesion": 0.9292843748109613
+    }
+  },
+  "linearisation": {
+    "patients": [
+      4,
+      10,
+      22
+    ],
+    "n_voxels": 5972,
+    "median refit sd / linearised sd": 0.881294101726961,
+    "mean refit var / linearised var": 2.215547376902818,
+    "median refit sd": 0.09122049328636014,
+    "median linearised sd": 0.09415227989619808,
+    "spearman": 0.8213588593240646
+  }
+}

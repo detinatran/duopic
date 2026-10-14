@@ -1,0 +1,396 @@
+{
+  "all": {
+    "n": 145,
+    "vendor CBF": 0.7223866489975347,
+    "vendor CBV": 0.6137025521296938,
+    "vendor MTT": 0.7263017438693131,
+    "vendor mean": 0.6874636483321807,
+    "oSVD CBF": 0.6328055517009978,
+    "oSVD CBV": 0.5986172162082452,
+    "oSVD MTT": 0.5270156107537807,
+    "oSVD mean": 0.5861461262210078,
+    "HemoPIC CBF": 0.6614279150701724,
+    "HemoPIC CBV": 0.6147026982465583,
+    "HemoPIC MTT": 0.5708161232778367,
+    "HemoPIC mean": 0.6156489121981892,
+    "DuoPIC CBF": 0.6892628598133278,
+    "DuoPIC CBV": 0.5939706619079124,
+    "DuoPIC MTT": 0.6384699735123746,
+    "DuoPIC mean": 0.6405678317445382,
+    "DuoPIC ID-CBV oSVD texture CBF": 0.6793525588915706,
+    "DuoPIC ID-CBV oSVD texture CBV": 0.5986055113587326,
+    "DuoPIC ID-CBV oSVD texture MTT": 0.5892786279059788,
+    "DuoPIC ID-CBV oSVD texture mean": 0.6224122327187608,
+    "DuoPIC-vox CBF": 0.7033820484662102,
+    "DuoPIC-vox CBV": 0.5986055113587326,
+    "DuoPIC-vox MTT": 0.6898933370451806,
+    "DuoPIC-vox mean": 0.6639602989567077,
+    "paired": {
+      "DuoPIC - HemoPIC CBF": {
+        "diff": 0.02783494474315541,
+        "p": 5.857930693540285e-14,
+        "n": 145,
+        "n_better": 118
+      },
+      "DuoPIC - HemoPIC CBV": {
+        "diff": -0.020732036338646054,
+        "p": 9.572661887136874e-05,
+        "n": 145,
+        "n_better": 47
+      },
+      "DuoPIC - HemoPIC MTT": {
+        "diff": 0.06765385023453784,
+        "p": 1.297896054820994e-15,
+        "n": 145,
+        "n_better": 122
+      },
+      "DuoPIC - HemoPIC mean": {
+        "diff": 0.02491891954634906,
+        "p": 5.843259592010443e-15,
+        "n": 145,
+        "n_better": 113
+      },
+      "DuoPIC-vox - HemoPIC CBF": {
+        "diff": 0.041954133396037825,
+        "p": 4.796542927793487e-13,
+        "n": 145,
+        "n_better": 116
+      },
+      "DuoPIC-vox - HemoPIC CBV": {
+        "diff": -0.016097186887825667,
+        "p": 0.0003657204289678893,
+        "n": 145,
+        "n_better": 48
+      },
+      "DuoPIC-vox - HemoPIC MTT": {
+        "diff": 0.11907721376734379,
+        "p": 2.6474606485934842e-20,
+        "n": 145,
+        "n_better": 130
+      },
+      "DuoPIC-vox - HemoPIC mean": {
+        "diff": 0.04831138675851865,
+        "p": 6.6672151952641104e-18,
+        "n": 145,
+        "n_better": 124
+      },
+      "DuoPIC - oSVD CBF": {
+        "diff": 0.05645730811232993,
+        "p": 2.79840050626928e-17,
+        "n": 145,
+        "n_better": 123
+      },
+      "DuoPIC - oSVD CBV": {
+        "diff": -0.004646554300332872,
+        "p": 0.4280851709619836,
+        "n": 145,
+        "n_better": 75
+      },
+      "DuoPIC - oSVD MTT": {
+        "diff": 0.11145436275859397,
+        "p": 5.034679493658416e-20,
+        "n": 145,
+        "n_better": 125
+      },
+      "DuoPIC - oSVD mean": {
+        "diff": 0.054421705523530345,
+        "p": 3.4054824744589176e-21,
+        "n": 145,
+        "n_better": 127
+      },
+      "DuoPIC-vox - oSVD CBF": {
+        "diff": 0.07057649676521235,
+        "p": 1.028986163456506e-20,
+        "n": 145,
+        "n_better": 127
+      },
+      "DuoPIC-vox - oSVD CBV": {
+        "diff": -1.1704849512480021e-05,
+        "p": 0.00029582907611971253,
+        "n": 145,
+        "n_better": 42
+      },
+      "DuoPIC-vox - oSVD MTT": {
+        "diff": 0.16287772629139993,
+        "p": 6.980036301601436e-23,
+        "n": 145,
+        "n_better": 134
+      },
+      "DuoPIC-vox - oSVD mean": {
+        "diff": 0.07781417273569993,
+        "p": 5.095748056441187e-23,
+        "n": 145,
+        "n_better": 134
+      },
+      "DuoPIC ID-CBV oSVD texture - oSVD CBF": {
+        "diff": 0.04654700719057275,
+        "p": 1.2419378855867228e-16,
+        "n": 145,
+        "n_better": 120
+      },
+      "DuoPIC ID-CBV oSVD texture - oSVD CBV": {
+        "diff": -1.1704849512480021e-05,
+        "p": 0.00029582907611971253,
+        "n": 145,
+        "n_better": 42
+      },
+      "DuoPIC ID-CBV oSVD texture - oSVD MTT": {
+        "diff": 0.06226301715219821,
+        "p": 1.7951807643117422e-19,
+        "n": 145,
+        "n_better": 125
+      },
+      "DuoPIC ID-CBV oSVD texture - oSVD mean": {
+        "diff": 0.03626610649775283,
+        "p": 3.619669570974577e-20,
+        "n": 145,
+        "n_better": 129
+      },
+      "DuoPIC-vox - vendor CBF": {
+        "diff": -0.01900460053132451,
+        "p": 0.0050511398773610975,
+        "n": 145,
+        "n_better": 56
+      },
+      "DuoPIC-vox - vendor CBV": {
+        "diff": -0.01509704077096123,
+        "p": 0.0004963204433754471,
+        "n": 145,
+        "n_better": 52
+      },
+      "DuoPIC-vox - vendor MTT": {
+        "diff": -0.03640840682413265,
+        "p": 1.9107422880172525e-07,
+        "n": 145,
+        "n_better": 40
+      },
+      "DuoPIC-vox - vendor mean": {
+        "diff": -0.023503349375472805,
+        "p": 1.400702325504112e-06,
+        "n": 145,
+        "n_better": 43
+      },
+      "HemoPIC - vendor CBF": {
+        "diff": -0.06095873392736233,
+        "p": 1.0557875722525151e-11,
+        "n": 145,
+        "n_better": 34
+      },
+      "HemoPIC - vendor CBV": {
+        "diff": 0.0010001461168644382,
+        "p": 0.0822261264801215,
+        "n": 145,
+        "n_better": 92
+      },
+      "HemoPIC - vendor MTT": {
+        "diff": -0.15548562059147644,
+        "p": 3.790611282841274e-23,
+        "n": 145,
+        "n_better": 14
+      },
+      "HemoPIC - vendor mean": {
+        "diff": -0.07181473613399145,
+        "p": 1.1018243489198083e-19,
+        "n": 145,
+        "n_better": 21
+      }
+    }
+  },
+  "accepted AIF": {
+    "n": 142,
+    "vendor CBF": 0.723335172786528,
+    "vendor CBV": 0.6183472064104757,
+    "vendor MTT": 0.7241300229288404,
+    "vendor mean": 0.6886041340419481,
+    "oSVD CBF": 0.6336328412635526,
+    "oSVD CBV": 0.6025191118817991,
+    "oSVD MTT": 0.5235558285412026,
+    "oSVD mean": 0.586569260562185,
+    "HemoPIC CBF": 0.6614814863178061,
+    "HemoPIC CBV": 0.6193158695434049,
+    "HemoPIC MTT": 0.5677772971060194,
+    "HemoPIC mean": 0.6161915509890767,
+    "DuoPIC CBF": 0.6891684304915743,
+    "DuoPIC CBV": 0.5981216422296445,
+    "DuoPIC MTT": 0.6366059690471688,
+    "DuoPIC mean": 0.6412986805894624,
+    "DuoPIC ID-CBV oSVD texture CBF": 0.6791426556749484,
+    "DuoPIC ID-CBV oSVD texture CBV": 0.6025076016589554,
+    "DuoPIC ID-CBV oSVD texture MTT": 0.5867334606607733,
+    "DuoPIC ID-CBV oSVD texture mean": 0.6227945726648924,
+    "DuoPIC-vox CBF": 0.7034091599603555,
+    "DuoPIC-vox CBV": 0.6025076016589554,
+    "DuoPIC-vox MTT": 0.6883710536628445,
+    "DuoPIC-vox mean": 0.6647626050940517,
+    "paired": {
+      "DuoPIC - HemoPIC CBF": {
+        "diff": 0.02768694417376811,
+        "p": 2.0046855694499838e-13,
+        "n": 142,
+        "n_better": 115
+      },
+      "DuoPIC - HemoPIC CBV": {
+        "diff": -0.021194227313760448,
+        "p": 9.270159517438121e-05,
+        "n": 142,
+        "n_better": 46
+      },
+      "DuoPIC - HemoPIC MTT": {
+        "diff": 0.06882867194114942,
+        "p": 1.7572330451409343e-15,
+        "n": 142,
+        "n_better": 120
+      },
+      "DuoPIC - HemoPIC mean": {
+        "diff": 0.02510712960038569,
+        "p": 1.4185141854961034e-14,
+        "n": 142,
+        "n_better": 110
+      },
+      "DuoPIC-vox - HemoPIC CBF": {
+        "diff": 0.041927673642549394,
+        "p": 7.103787572212439e-13,
+        "n": 142,
+        "n_better": 114
+      },
+      "DuoPIC-vox - HemoPIC CBV": {
+        "diff": -0.016808267884449564,
+        "p": 0.00027903705286476117,
+        "n": 142,
+        "n_better": 46
+      },
+      "DuoPIC-vox - HemoPIC MTT": {
+        "diff": 0.12059375655682514,
+        "p": 6.331781608039508e-20,
+        "n": 142,
+        "n_better": 127
+      },
+      "DuoPIC-vox - HemoPIC mean": {
+        "diff": 0.04857105410497498,
+        "p": 9.958876444638258e-18,
+        "n": 142,
+        "n_better": 122
+      },
+      "DuoPIC - oSVD CBF": {
+        "diff": 0.05553558922802166,
+        "p": 3.647088855811716e-17,
+        "n": 142,
+        "n_better": 121
+      },
+      "DuoPIC - oSVD CBV": {
+        "diff": -0.004397469652154712,
+        "p": 0.48805427615676367,
+        "n": 142,
+        "n_better": 74
+      },
+      "DuoPIC - oSVD MTT": {
+        "diff": 0.1130501405059661,
+        "p": 1.0124875347268784e-19,
+        "n": 142,
+        "n_better": 123
+      },
+      "DuoPIC - oSVD mean": {
+        "diff": 0.054729420027277674,
+        "p": 4.530694115685515e-21,
+        "n": 142,
+        "n_better": 125
+      },
+      "DuoPIC-vox - oSVD CBF": {
+        "diff": 0.06977631869680295,
+        "p": 3.661419720771171e-20,
+        "n": 142,
+        "n_better": 124
+      },
+      "DuoPIC-vox - oSVD CBV": {
+        "diff": -1.1510222843835503e-05,
+        "p": 0.0005590463441323555,
+        "n": 142,
+        "n_better": 42
+      },
+      "DuoPIC-vox - oSVD MTT": {
+        "diff": 0.1648152251216418,
+        "p": 2.0097296528642894e-22,
+        "n": 142,
+        "n_better": 131
+      },
+      "DuoPIC-vox - oSVD mean": {
+        "diff": 0.07819334453186697,
+        "p": 1.6116933587068563e-22,
+        "n": 142,
+        "n_better": 131
+      },
+      "DuoPIC ID-CBV oSVD texture - oSVD CBF": {
+        "diff": 0.04550981441139579,
+        "p": 3.378509492215509e-16,
+        "n": 142,
+        "n_better": 118
+      },
+      "DuoPIC ID-CBV oSVD texture - oSVD CBV": {
+        "diff": -1.1510222843835503e-05,
+        "p": 0.0005590463441323555,
+        "n": 142,
+        "n_better": 42
+      },
+      "DuoPIC ID-CBV oSVD texture - oSVD MTT": {
+        "diff": 0.06317763211957053,
+        "p": 2.870820973369377e-19,
+        "n": 142,
+        "n_better": 123
+      },
+      "DuoPIC ID-CBV oSVD texture - oSVD mean": {
+        "diff": 0.0362253121027075,
+        "p": 8.880144274242753e-20,
+        "n": 142,
+        "n_better": 127
+      },
+      "DuoPIC-vox - vendor CBF": {
+        "diff": -0.019926012826172568,
+        "p": 0.003969942282871278,
+        "n": 142,
+        "n_better": 55
+      },
+      "DuoPIC-vox - vendor CBV": {
+        "diff": -0.01583960475152037,
+        "p": 0.0003904511161149892,
+        "n": 142,
+        "n_better": 51
+      },
+      "DuoPIC-vox - vendor MTT": {
+        "diff": -0.035758969265995866,
+        "p": 4.878827184454425e-07,
+        "n": 142,
+        "n_better": 40
+      },
+      "DuoPIC-vox - vendor mean": {
+        "diff": -0.023841528947896273,
+        "p": 1.2616472310929526e-06,
+        "n": 142,
+        "n_better": 41
+      },
+      "HemoPIC - vendor CBF": {
+        "diff": -0.06185368646872196,
+        "p": 7.621810908713831e-12,
+        "n": 142,
+        "n_better": 33
+      },
+      "HemoPIC - vendor CBV": {
+        "diff": 0.0009686631329292006,
+        "p": 0.08734191164540825,
+        "n": 142,
+        "n_better": 90
+      },
+      "HemoPIC - vendor MTT": {
+        "diff": -0.15635272582282095,
+        "p": 1.2408542748559837e-22,
+        "n": 142,
+        "n_better": 14
+      },
+      "HemoPIC - vendor mean": {
+        "diff": -0.07241258305287124,
+        "p": 2.4756454953957394e-19,
+        "n": 142,
+        "n_better": 20
+      }
+    }
+  }
+}

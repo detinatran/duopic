@@ -1,0 +1,33 @@
+{
+  "npde": {
+    "n_roi": 651,
+    "n_patients": 43,
+    "loglik gain, median": 4.893291411966942,
+    "fraction with gain > 2": 0.620583717357911,
+    "sigma_u, median": 0.09443169491039329,
+    "cover50_det": 0.5129480286738352,
+    "cover80_det": 0.6732142857142858,
+    "cover95_det": 0.7736456733230926,
+    "logscore_det": 1.4982176890806265,
+    "width95_det": 0.4054053233109914,
+    "nrmse_det": 0.27626430634551846,
+    "cover50_spde": 0.5589362519201229,
+    "cover80_spde": 0.7246441372247824,
+    "cover95_spde": 0.8134651817716334,
+    "logscore_spde": 1.6295880841096806,
+    "width95_spde": 0.5627576648272565,
+    "nrmse_spde": 0.27626430634551846,
+    "cover95 spde - det, per patient": {
+      "diff": 0.040011028054632705,
+      "p": 4.203579534387324e-08
+    },
+    "logscore spde - det, per patient": {
+      "diff": 0.12929407910868584,
+      "p": 0.005623578485028702
+    },
+    "nrmse spde - det, per patient": {
+      "diff": 0.0,
+      "p": 1.0
+    }
+  }
+}

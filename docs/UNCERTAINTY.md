@@ -149,7 +149,7 @@ Khi tinh chỉnh bằng L-BFGS-B, mức CBF của ROI thay đổi hơn 5% ở 9%
 
 ### 2.8 Bất định do AIF
 
-`scripts/run_aif_ensemble.py`: 10 AIF cho mỗi bệnh nhân (bootstrap các voxel động mạch và nhiễu hệ số hiệu chỉnh thể tích từng phần; 2 thành viên cuối dùng cụm động mạch thứ hai), chạy lại toàn bộ pipeline ROI. 36 bệnh nhân có AIF tự động được chấp nhận.
+`scripts/run_aif_ensemble.py` (số liệu `docs/results/full_aif/uq/aif_ensemble.{csv,json}`): 10 AIF cho mỗi bệnh nhân (bootstrap các voxel động mạch và nhiễu hệ số hiệu chỉnh thể tích từng phần; 2 thành viên cuối dùng cụm động mạch thứ hai), chạy lại toàn bộ pipeline ROI. 36 bệnh nhân có AIF tự động được chấp nhận.
 
 - AUC gần như không đổi: CBF 0.787–0.792, CBV 0.547–0.562, MTT 0.761–0.768 giữa các thành viên; DuoPIC − oSVD giữ dấu ở mọi thành viên.
 - Giá trị tuyệt đối dao động mạnh hơn: CV giữa các thành viên của median trong não là CBF 0.19, CBV 0.16, MTT 0.18 (oSVD MTT 0.07).
@@ -158,7 +158,7 @@ Khi tinh chỉnh bằng L-BFGS-B, mức CBF của ROI thay đổi hơn 5% ở 9%
 
 ### 2.9 Bất định ở mức voxel (DuoPIC-vox)
 
-`scripts/run_voxel_uq.py`, 43 bệnh nhân, 3000 voxel mỗi bệnh nhân (một phần ba trong vùng nhồi máu):
+`scripts/run_voxel_uq.py` (số liệu `docs/results/full_aif/vox_uq/`), 43 bệnh nhân, 3000 voxel mỗi bệnh nhân (một phần ba trong vùng nhồi máu):
 
 - Laplace có nhiệt độ cho từng voxel (κ_v từ phần dư của chính voxel); bất định của ROI truyền xuống bằng định lý hàm ẩn (dx/dθ) và hiệp phương sai của các mẫu posterior ROI.
 - Coverage 95% với bậc tự do dư (n_eff − 3): giấu frame 0.91, bán tổng hợp 0.90–0.94 (log V 0.94, log Cin 0.90, delay 0.94). Không trừ bậc tự do thì khoảng hẹp quá (0.85–0.90).
@@ -167,15 +167,16 @@ Khi tinh chỉnh bằng L-BFGS-B, mức CBF của ROI thay đổi hơn 5% ở 9%
 
 ### 2.10 PDE ngẫu nhiên (SPDE)
 
-`hemopic_plus/npde/stochastic.py`, `scripts/run_spde.py`: nhiễu trắng ở lối vào ống (điều kiện biên), nên mỗi hiện thực vẫn bảo toàn khối lượng và MTT. Với θ cố định, đường cong mô là C = Φ(u + η) và dữ liệu đã làm mượt là một Gaussian process, nên likelihood tính chính xác và frame bị giấu được dự đoán bằng điều kiện hoá Gaussian. Fit 2 bước: θ của mô hình vật lý, rồi mức nhiễu σ_u, σ_v.
+`hemopic_plus/npde/stochastic.py`, `scripts/run_spde.py` (số liệu `docs/results/full_aif/spde/{tank,npde}/`): nhiễu trắng ở lối vào ống (điều kiện biên), nên mỗi hiện thực vẫn bảo toàn khối lượng và MTT. Với θ cố định, đường cong mô là C = Φ(u + η) và dữ liệu đã làm mượt là một Gaussian process, nên likelihood tính chính xác và frame bị giấu được dự đoán bằng điều kiện hoá Gaussian. Fit 2 bước: θ của mô hình vật lý, rồi mức nhiễu σ_u, σ_v.
 
 | 651 ROI, 43 bn | tank: tất định → SPDE | neural PDE: tất định → SPDE |
 |---|---|---|
-| Coverage giấu frame 50 / 80 / 95% | 0.50 / 0.65 / 0.77 → 0.56 / 0.73 / 0.82 | 0.52 / 0.67 / 0.77 → 0.56 / 0.73 / 0.81 |
-| Log score (nat / frame) | +0.24 (p = 3e−6) | +0.15 (p = 0.014) |
-| σ_u (theo biên độ lối vào) | 12% | 10% |
+| Coverage giấu frame 50 / 80 / 95% | 0.50 / 0.65 / 0.77 → 0.56 / 0.73 / 0.82 (p = 2e−13) | 0.51 / 0.67 / 0.77 → 0.56 / 0.73 / 0.81 (p = 4e−8) |
+| Log score (nat / frame) | +0.24 (p = 3e−6) | +0.13 (p = 0.006) |
+| σ_u (theo biên độ lối vào) | 12% | 9% |
 
 - Bản đồ và nRMSE không đổi. Khoảng tin cậy vẫn hẹp hơn mức danh nghĩa vì chưa cộng bất định tham số.
+- Neural PDE ở đây được train lại (5 fold, `docs/results/full_aif/npde_rerun/`, nMSE giữ lại: PDE 0.0445 → neural PDE 0.0265, neural tốt hơn ở 63% ROI); lần train trước cho SPDE log score +0.15 (p = 0.014), cùng kết luận.
 - Fit đồng thời θ và nhiễu không dùng được: nhiễu thay luôn phần động lực học (nRMSE của đường cong không nhiễu tăng 2–20 lần, σ_u chạm cận).
 
 ## 3. Hạn chế
