@@ -91,6 +91,58 @@ def fig_residuals(out, data_root, cfgs):
     plt.close(fig)
 
 
+def residuals_rescaled(out, data_root, cfg, ref):
+    """residuals() for a fit with a wrong frame interval (HemoPIC's 1 s), with its time
+    axis rescaled to the true interval of the fit `ref` of the same subject."""
+    res = {g: [] for g, _ in GROUPS}
+    for fd in sorted((out / cfg).glob("training_*")):
+        zr = out / ref / fd.name / "fit_curves.npz"
+        if not zr.exists() or not (fd / "fit_curves.npz").exists():
+            continue
+        grp = roi_groups(fd, data_root)
+        z = np.load(fd / "fit_curves.npz")
+        scale = float(np.load(zr)["dt"]) / float(z["dt"])
+        t = (z["t"] - z["t"][0]) * scale
+        for i, rid in enumerate(z["roi_ids"]):
+            g = grp.get(int(rid))
+            if g is None or not z["success"][i]:
+                continue
+            co, cf = z["c_obs"][i], z["c_fit"][i]
+            pk = int(np.argmax(co))
+            res[g].append(np.interp(t[pk] + GRID, t, (co - cf) / co.max(), left=np.nan, right=np.nan))
+    return res
+
+
+def fig_residuals_paper(out, data_root, cfg="full_aif", baseline="baseline", path=None, fs=12):
+    """Paper Fig. 2: one row, HemoPIC (`baseline`) and the three DuoPIC tissue models of `cfg`."""
+    var = [("", "DuoPIC, compartment", C[0]), ("__pde", "DuoPIC, PDE", C[1]), ("__npde", "DuoPIC, neural PDE", C[2])]
+    global VAR
+    VAR = var
+    res = residuals(out, data_root, cfg)
+    base = residuals_rescaled(out, data_root, baseline, cfg) if baseline else None
+    with plt.rc_context({"font.size": fs, "figure.facecolor": "white", "axes.facecolor": "white", "savefig.facecolor": "white"}):
+        fig, axes = plt.subplots(1, len(GROUPS), figsize=(12, 2.55), sharex=True)
+        for j, (g, gl) in enumerate(GROUPS):
+            ax = axes[j]
+            ax.axhline(0, color=INK2, lw=0.8)
+            curves = ([("HemoPIC", INK2, np.array(base[g]), "--")] if base else []) + \
+                     [(vl, col, np.array(res[(v, g)]), "-") for v, vl, col in var]
+            for lab, col, a, ls in curves:
+                m = np.nanmean(a, 0)
+                se = np.nanstd(a, 0) / np.sqrt(np.sum(np.isfinite(a), 0))
+                ax.fill_between(GRID, m - 2 * se, m + 2 * se, color=col, alpha=0.15, lw=0)
+                ax.plot(GRID, m, color=col, lw=1.8, ls=ls, label=lab)
+            n = len(res[('', g)])
+            nb = f", HemoPIC n={len(base[g])}" if base and len(base[g]) != n else ""
+            ax.set_title(f"{gl} (n={n}{nb})", loc="left", fontsize=fs, color=INK)
+            ax.set_xlabel("seconds from the measured peak", fontsize=fs - 1)
+        axes[0].set_ylabel("(measured - fit) / peak")
+        axes[0].legend(fontsize=fs - 2, frameon=False)
+        fig.tight_layout()
+        fig.savefig(path or FIG / "duopic_residuals_paper.png", dpi=200)
+        plt.close(fig)
+
+
 def fig_examples(out, data_root, cfg, pid=22):
     fd = out / cfg / f"training_{pid}"
     grp = roi_groups(fd, data_root)
