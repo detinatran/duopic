@@ -157,7 +157,6 @@ def main():
     tr_idx, te_idx = np.where(roi_fold != a.test_fold)[0], np.where(roi_fold == a.test_fold)[0]
     print(f"[{cfg.name}] solver surrogate: {len(pids)} patients, {len(tr_idx)} train / {len(te_idx)} test ROIs", flush=True)
 
-    # training set
     g = torch.Generator().manual_seed(0)
     rep = np.repeat(tr_idx, a.samples + 1)
     ct = co.take(rep)
@@ -171,7 +170,6 @@ def main():
         y_t = torch.cat([exact(ct.take(np.arange(i, min(i + 2048, len(rep)))), th_t[i:i + 2048], nu_t[i:i + 2048],
                                phi_t[i:i + 2048], n_cells) for i in range(0, len(rep), 2048)])
     print(f"  {len(rep)} training curves simulated in {time.time() - t0:.0f}s", flush=True)
-    # curves with almost no tracer (tiny Cin or V) make the relative error meaningless; they are left out
     keep = energy_ok(ct, y_t, th_t)
     print(f"  {int((~keep).sum())} near-empty curves left out", flush=True)
     kept = torch.where(keep)[0]
@@ -196,7 +194,6 @@ def main():
     for prm in net.parameters():
         prm.requires_grad_(False)
 
-    # 1. accuracy against the exact solver
     ce = co.take(te_idx)
     ei = torch.as_tensor(te_idx)
     th_e, nu_e, phi_e = theta[ei], nu1[ei], phi1[ei]
@@ -219,7 +216,6 @@ def main():
             ok = energy_ok(ce, y, th)
             res[f"surrogate error vs exact, {lab}"] = q(nerr(ce, net(ce, th, nu, ph), y)[ok].numpy()) | {"n": int(ok.sum())}
 
-    # 2. time per curve
     def fwd(sim):
         with torch.no_grad():
             sim(ce, th_e, nu_e, phi_e)
@@ -235,7 +231,6 @@ def main():
     res["ms per curve, forward + gradient, exact"] = 1e3 * timed(lambda: grad(ex)) / B
     res["ms per curve, forward + gradient, surrogate"] = 1e3 * timed(lambda: grad(net)) / B
 
-    # 3. fit with the surrogate
     t0 = time.time()
     th_ex = refit(ce, th_e, nu_e, phi_e, ex, a.refit_steps)
     th_su = refit(ce, th_e, nu_e, phi_e, net, a.refit_steps)

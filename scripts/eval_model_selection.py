@@ -80,7 +80,7 @@ def main():
     with ProcessPoolExecutor(max_workers=a.workers) as ex:
         for r in ex.map(work, jobs):
             rows += r
-    rows = [r for r in rows if r["data compartment"] < 0.5]  # ROIs the compartment fits at all
+    rows = [r for r in rows if r["data compartment"] < 0.5]
     summ = {"n_roi": len(rows), "n_subjects": len(jobs), "k": K,
             "note": "closure weights shared by all ROIs, not counted per ROI"}
     for crit in ("AIC", "BIC"):

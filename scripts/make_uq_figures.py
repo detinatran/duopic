@@ -244,7 +244,7 @@ def fig_maps_column(out, data_root, cfgs, pid=22, width=3.35, fs=6, labels=None,
             ("CBF", f"CBF {ens}", "ens", 0.5, "Oranges"), ("MTT", "MTT 95% width", "uq", 1.5, "Oranges")]
     if titles:
         cols = [(m, t, kind, vmax, cmap) for (m, _, kind, vmax, cmap), t in zip(cols, titles)]
-    extra = 0.012 * fs * max(c[1].count("\n") for c in cols)  # inches for multi-line titles
+    extra = 0.012 * fs * max(c[1].count("\n") for c in cols)
     rc = {"figure.facecolor": "white", "axes.facecolor": "white", "savefig.facecolor": "white", "font.size": fs}
     with plt.rc_context(rc):
         h = 0.53 * width + 0.25 + 0.06 * (fs - 6) + extra
