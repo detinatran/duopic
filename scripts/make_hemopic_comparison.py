@@ -125,12 +125,71 @@ def fig_maps(out, data_root, pid, auc_vox, auc_hem, path, width=3.35):
     plt.close(fig)
 
 
+def fig_maps_wide(out, data_root, pid, auc_vox, auc_hem, path, width=7.0, fs=7):
+    """The panels of fig_maps in one row for a two-column-wide figure: three groups
+    (ISLES ref., HemoPIC, DuoPIC-vox) of CBF, CBV and MTT, lesion AUC under each map."""
+    sub = f"training_{pid}"
+    base = data_root / sub
+    canon = lambda v, ref: nib.as_closest_canonical(nib.Nifti1Image(v, nib.load(str(ref)).affine)).get_fdata()  # noqa: E731
+    ref = base / "hemopic_seg4" / "seg4_label_ref24.nii.gz"
+    seg = canon(nib.load(str(ref)).get_fdata(), ref) > 0
+    ot = canon(load_nifti(find_nii(base, "OT"))[1].astype(float), ref) > 0
+    z = int(np.argmax(ot.sum(axis=(0, 1))))
+    xs, ys = np.where(seg[:, :, z])
+    crop = (slice(xs.min() - 3, xs.max() + 4), slice(ys.min() - 3, ys.max() + 4))
+    brain_sl = seg[:, :, z][crop].T
+    o2 = ot[:, :, z][crop].T.astype(float)
+    brain = load_nifti(base / SEG4_REL)[1] > 0
+    ref_vols = isles(base)
+    groups = [("ISLES maps", ref_vols, aucs(ref_vols, brain, load_nifti(find_nii(base, "OT"))[1] > 0)),
+              ("HemoPIC", hemopic(out, sub), auc_hem), ("DuoPIC-vox", duopic_vox(out, sub), auc_vox)]
+    best = {m: max(g[2][m] for g in groups) for m, _ in MAPS}
+    gap, ggap, cb_gap, cb_w, cb_lab = 0.03, 0.14, 0.08, 0.08, 0.42
+    pw = (width - 6 * gap - 2 * ggap - cb_gap - cb_w - cb_lab) / 9
+    ph = pw * brain_sl.shape[0] / brain_sl.shape[1]
+    gt_h, mt_h, auc_h = 0.17, 0.15, 0.15
+    H = gt_h + mt_h + ph + auc_h + 0.02
+    fig = plt.figure(figsize=(width, H))
+    cm = plt.get_cmap("Blues").copy()
+    cm.set_bad("white")
+    im = None
+    y0 = auc_h
+    for g, (gname, vols, auc) in enumerate(groups):
+        x_g = g * (3 * pw + 2 * gap + ggap)
+        fig.text((x_g + 1.5 * pw + gap) / width, (H - 0.5 * gt_h) / H, gname, ha="center", va="center",
+                 fontsize=fs + 0.5, fontweight="bold", color=INK)
+        for j, (m, _) in enumerate(MAPS):
+            ax = fig.add_axes([(x_g + j * (pw + gap)) / width, y0 / H, pw / width, ph / H])
+            v = canon(vols[m], ref)[:, :, z][crop].T
+            ok = brain_sl & np.isfinite(v) & (v > 0)
+            img = np.where(ok, v / np.median(v[ok]), np.nan)
+            im = ax.imshow(img, origin="lower", cmap=cm, vmin=0, vmax=2.5, interpolation="nearest", aspect="auto")
+            ax.contour(o2, levels=[0.5], colors=["#c8372d"], linewidths=0.7, origin="lower")
+            ax.set_xticks([])
+            ax.set_yticks([])
+            ax.grid(False)
+            for sp in ax.spines.values():
+                sp.set_visible(False)
+            ax.set_title(m, pad=2, fontsize=fs, color=INK)
+            top = auc[m] >= best[m] - 1e-9
+            fig.text((x_g + j * (pw + gap) + 0.5 * pw) / width, 0.5 * auc_h / H, f"AUC {auc[m]:.2f}", ha="center",
+                     va="center", fontsize=fs, color=INK if top else INK2, fontweight="bold" if top else "normal")
+    cax = fig.add_axes([(width - cb_lab - cb_w) / width, (y0 + 0.1 * ph) / H, cb_w / width, 0.8 * ph / H])
+    cb = fig.colorbar(im, cax=cax, ticks=[0, 1, 2])
+    cb.ax.tick_params(labelsize=fs - 0.5, length=1.5, pad=1)
+    cb.outline.set_linewidth(0.4)
+    cb.set_label("/ brain median", fontsize=fs - 0.5, labelpad=2)
+    fig.savefig(path, dpi=400)
+    plt.close(fig)
+
+
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--out-root", default=str(ROOT / "outputs"))
     p.add_argument("--data-root", default=str(ROOT.parent / "HemoPIC" / "data" / "ISLES2017_Training"))
     p.add_argument("--patient", type=int, default=13)
     p.add_argument("--maps-width", type=float, default=3.1, help="width of the map figure in inches")
+    p.add_argument("--wide", action="store_true", help="also the one-row map figure for a two-column-wide float")
     a = p.parse_args()
     out, data_root = Path(a.out_root), Path(a.data_root)
     rows = list(csv.DictReader(open(RES / "central_volume.csv", encoding="utf8")))
@@ -151,6 +210,8 @@ def main():
     (RES / "hemopic_vs_duopic.json").write_text(json.dumps(stats, indent=2), encoding="utf8")
 
     fig_maps(out, data_root, a.patient, vox[a.patient], hem[a.patient], FIG / "hemopic_vs_duopic_maps.png", a.maps_width)
+    if a.wide:
+        fig_maps_wide(out, data_root, a.patient, vox[a.patient], hem[a.patient], FIG / "hemopic_vs_duopic_maps_wide.png")
 
     fig, axes = plt.subplots(1, 3, figsize=(3.35, 1.3), sharex=True, sharey=True)
     for k, (m, _) in enumerate(MAPS):

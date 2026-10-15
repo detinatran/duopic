@@ -223,9 +223,11 @@ def fig_maps(out, data_root, cfgs, pid=22, show_title=True):
     plt.close(fig)
 
 
-def fig_maps_column(out, data_root, cfgs, pid=22, width=3.35):
+def fig_maps_column(out, data_root, cfgs, pid=22, width=3.35, fs=6, labels=None, titles=None):
     """Same panels as fig_maps, laid out for one column of a two-column paper:
-    no title, white background, one shared colour bar under each column."""
+    no title, white background, one shared colour bar under each column.
+    fs: font size in points at the printed width; labels: row names (default LABEL);
+    titles: column titles in place of the defaults."""
     import nibabel as nib
 
     def load(p):
@@ -240,11 +242,15 @@ def fig_maps_column(out, data_root, cfgs, pid=22, width=3.35):
     ens = "ensemble sd" if any("__npde" in c for c in cfgs) else "pipeline sd"
     cols = [("CBF", "CBF", None, 2.5, "Blues"), ("CBF", "CBF 95% width", "uq", 1.5, "Oranges"),
             ("CBF", f"CBF {ens}", "ens", 0.5, "Oranges"), ("MTT", "MTT 95% width", "uq", 1.5, "Oranges")]
-    rc = {"figure.facecolor": "white", "axes.facecolor": "white", "savefig.facecolor": "white", "font.size": 6}
+    if titles:
+        cols = [(m, t, kind, vmax, cmap) for (m, _, kind, vmax, cmap), t in zip(cols, titles)]
+    extra = 0.012 * fs * max(c[1].count("\n") for c in cols)  # inches for multi-line titles
+    rc = {"figure.facecolor": "white", "axes.facecolor": "white", "savefig.facecolor": "white", "font.size": fs}
     with plt.rc_context(rc):
-        fig = plt.figure(figsize=(width, 0.53 * width + 0.25))
+        h = 0.53 * width + 0.25 + 0.06 * (fs - 6) + extra
+        fig = plt.figure(figsize=(width, h))
         gs = fig.add_gridspec(len(cfgs) + 1, len(cols), height_ratios=[1] * len(cfgs) + [0.07],
-                              left=0.06, right=0.995, top=0.94, bottom=0.07, wspace=0.04, hspace=0.06)
+                              left=0.06 + 0.008 * (fs - 6), right=0.995, top=0.94 - 0.01 * (fs - 6) - extra / h, bottom=0.07 + 0.008 * (fs - 6), wspace=0.04, hspace=0.06)
         for j, (m, title, kind, vmax, cmap) in enumerate(cols):
             im = None
             for i, cfg in enumerate(cfgs):
@@ -269,14 +275,14 @@ def fig_maps_column(out, data_root, cfgs, pid=22, width=3.35):
                 for sp in ax.spines.values():
                     sp.set_visible(False)
                 if i == 0:
-                    ax.set_title(title, fontsize=6, pad=2, color=INK)
+                    ax.set_title(title, fontsize=fs, pad=2, color=INK)
                 if j == 0:
-                    ax.set_ylabel(LABEL.get(cfg, cfg), fontsize=6, labelpad=1, color=INK)
+                    ax.set_ylabel((labels or {}).get(cfg, LABEL.get(cfg, cfg)), fontsize=fs, labelpad=1, color=INK)
             cax = fig.add_subplot(gs[len(cfgs), j])
             pos = cax.get_position()
             cax.set_position([pos.x0 + 0.12 * pos.width, pos.y0, 0.76 * pos.width, pos.height])
-            cb = fig.colorbar(im, cax=cax, orientation="horizontal", ticks=[0, vmax / 2, vmax])
-            cb.ax.tick_params(labelsize=5, length=1.5, pad=1)
+            cb = fig.colorbar(im, cax=cax, orientation="horizontal", ticks=[0, vmax / 2, vmax], format="%g")
+            cb.ax.tick_params(labelsize=fs, length=1.5, pad=1)
             cb.outline.set_linewidth(0.4)
         fig.savefig(FIG / f"{PREFIX}maps_column.png", dpi=400)
         plt.close(fig)
