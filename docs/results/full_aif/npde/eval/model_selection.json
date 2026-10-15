@@ -1,0 +1,46 @@
+{
+  "n_roi": 585,
+  "n_subjects": 43,
+  "k": {
+    "compartment": 7,
+    "PDE": 8,
+    "neural PDE": 8
+  },
+  "note": "closure weights shared by all ROIs, not counted per ROI",
+  "AIC PDE - compartment": {
+    "median": 1.738113223639857,
+    "fraction < 0": 0.2717948717948718,
+    "fraction < -2": 0.14017094017094017,
+    "sum": 388.32046210097707
+  },
+  "AIC neural PDE - compartment": {
+    "median": -1.373984860939565,
+    "fraction < 0": 0.6393162393162393,
+    "fraction < -2": 0.4393162393162393,
+    "sum": -1501.3791791990002
+  },
+  "AIC neural PDE - PDE": {
+    "median": -0.5544839896718443,
+    "fraction < 0": 0.6632478632478632,
+    "fraction < -2": 0.40341880341880343,
+    "sum": -1889.6996412999772
+  },
+  "BIC PDE - compartment": {
+    "median": 1.9517755567958925,
+    "fraction < 0": 0.24273504273504273,
+    "fraction < -2": 0.13162393162393163,
+    "sum": 569.8451809763025
+  },
+  "BIC neural PDE - compartment": {
+    "median": -1.099300643087446,
+    "fraction < 0": 0.6051282051282051,
+    "fraction < -2": 0.41367521367521365,
+    "sum": -1319.8544603236746
+  },
+  "BIC neural PDE - PDE": {
+    "median": -0.5544839896718443,
+    "fraction < 0": 0.6632478632478632,
+    "fraction < -2": 0.40341880341880343,
+    "sum": -1889.699641299977
+  }
+}

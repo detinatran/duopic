@@ -1,0 +1,87 @@
+{
+  "n_train_curves": 20459,
+  "n_test_roi": 134,
+  "settings": {
+    "config": "configs\\full_aif.yaml",
+    "out_root": null,
+    "folds": 5,
+    "test_fold": 0,
+    "samples": 40,
+    "steps": 20000,
+    "batch": 512,
+    "refit_steps": 800,
+    "width": 48,
+    "modes": 24,
+    "layers": 4,
+    "threads": 30
+  },
+  "model error (exact fit vs data)": {
+    "median": 0.03420382339343511,
+    "p90": 0.24268150455879867,
+    "max": 1.0083048934993732
+  },
+  "surrogate error vs exact, fitted": {
+    "median": 0.0017183334759924085,
+    "p90": 0.017303251059966218,
+    "max": 0.18828031030023998,
+    "n": 130
+  },
+  "surrogate error vs exact, perturbed": {
+    "median": 0.0016414499158159557,
+    "p90": 0.018158229245583867,
+    "max": 0.21718811656737483,
+    "n": 130
+  },
+  "surrogate error vs exact, MTT x3": {
+    "median": 0.0017512574322150142,
+    "p90": 0.019420658010498148,
+    "max": 0.09408273280733066,
+    "n": 130
+  },
+  "surrogate error vs exact, Pe at upper bound": {
+    "median": 0.0018244973282715209,
+    "p90": 0.01790376376227655,
+    "max": 0.18828007204766506,
+    "n": 130
+  },
+  "surrogate error vs exact, Pe at lower bound": {
+    "median": 0.008214258165290205,
+    "p90": 0.034552942222013626,
+    "max": 0.28337320094865004,
+    "n": 130
+  },
+  "ms per curve, forward, exact": 0.15073179104397988,
+  "ms per curve, forward, surrogate": 0.050222985072338557,
+  "ms per curve, forward + gradient, exact": 0.4059528358206379,
+  "ms per curve, forward + gradient, surrogate": 0.10514373134355992,
+  "|relative change| surrogate fit vs exact fit, CBF (F)": {
+    "median": 0.009025199690175956,
+    "p90": 0.04312861385865532,
+    "max": 0.5169581363595366
+  },
+  "|relative change| surrogate fit vs exact fit, V": {
+    "median": 0.008883904909673057,
+    "p90": 0.04243635330066363,
+    "max": 0.3526093373935262
+  },
+  "|relative change| surrogate fit vs exact fit, MTT": {
+    "median": 0.020007612170668487,
+    "p90": 0.07620502410616474,
+    "max": 0.5732310291962897
+  },
+  "data error at exact refit (exact solver)": {
+    "median": 0.03420379651155754,
+    "p90": 0.24268153019073418,
+    "max": 1.00830489357923
+  },
+  "data error at surrogate refit (exact solver)": {
+    "median": 0.03990533432849466,
+    "p90": 0.2412015874540934,
+    "max": 1.0079751015891674
+  },
+  "data error at surrogate refit (surrogate)": {
+    "median": 0.03491827939723324,
+    "p90": 0.235515761777683,
+    "max": 1.0082053234796657
+  }
+}

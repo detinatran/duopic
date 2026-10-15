@@ -1,0 +1,15 @@
+ISLES'24 (smoothed, sigma 3), scripts/eval_external.py --metrics: mean [95% bootstrap CI] over patients;
+Dice and volume at the leave-one-patient-out threshold (hemopic_plus/lesion_metrics.py).
+
+n patients 145
+vendor                       AUC 0.687 [0.670,0.704] AP 0.088 [0.070,0.107] | CBF: AP 0.102 Dice 0.137 dV 52.9 rhoV 0.22 | CBV: AP 0.057 Dice 0.076 dV 112.2 rhoV 0.07 | MTT: AP 0.105 Dice 0.131 dV 61.3 rhoV 0.19
+oSVD                         AUC 0.672 [0.657,0.687] AP 0.082 [0.065,0.101] | CBF: AP 0.102 Dice 0.119 dV 66.2 rhoV 0.19 | CBV: AP 0.080 Dice 0.095 dV 60.1 rhoV 0.18 | MTT: AP 0.065 Dice 0.083 dV 117.6 rhoV 0.07
+HemoPIC                      AUC 0.688 [0.672,0.703] AP 0.104 [0.083,0.126] | CBF: AP 0.154 Dice 0.175 dV 26.6 rhoV 0.37 | CBV: AP 0.068 Dice 0.081 dV 114.0 rhoV 0.07 | MTT: AP 0.089 Dice 0.121 dV 72.4 rhoV 0.27
+DuoPIC                       AUC 0.697 [0.683,0.711] AP 0.112 [0.091,0.134] | CBF: AP 0.158 Dice 0.176 dV 37.0 rhoV 0.29 | CBV: AP 0.064 Dice 0.076 dV 85.2 rhoV 0.11 | MTT: AP 0.113 Dice 0.138 dV 76.4 rhoV 0.14
+DuoPIC ID-CBV oSVD texture   AUC 0.676 [0.662,0.688] AP 0.092 [0.074,0.111] | CBF: AP 0.143 Dice 0.155 dV 55.9 rhoV 0.19 | CBV: AP 0.080 Dice 0.095 dV 60.2 rhoV 0.18 | MTT: AP 0.053 Dice 0.074 dV 199.2 rhoV 0.04
+DuoPIC-vox                   AUC 0.743 [0.724,0.760] AP 0.120 [0.097,0.146] | CBF: AP 0.135 Dice 0.161 dV 54.7 rhoV 0.26 | CBV: AP 0.080 Dice 0.095 dV 60.2 rhoV 0.18 | MTT: AP 0.146 Dice 0.146 dV 82.1 rhoV 0.19
+vox minus vendor {'mean AUC': (0.055, [0.048, 0.063], 'p 2e-21'), 'mean AP': (0.032, [0.025, 0.039], 'p 2e-17'), 'CBF Dice CV': (0.024, [0.016, 0.033], 'p 7e-09'), 'MTT Dice CV': (0.015, [0.006, 0.024], 'p 0.09')}
+vox minus oSVD {'mean AUC': (0.07, [0.059, 0.082], 'p 2e-20'), 'mean AP': (0.038, [0.03, 0.047], 'p 5e-18'), 'CBF Dice CV': (0.042, [0.032, 0.053], 'p 1e-12'), 'MTT Dice CV': (0.062, [0.046, 0.079], 'p 1e-11')}
+vox minus HemoPIC {'mean AUC': (0.055, [0.048, 0.062], 'p 9e-22'), 'mean AP': (0.017, [0.01, 0.023], 'p 0.0001'), 'CBF Dice CV': (-0.014, [-0.024, -0.005], 'p 0.003'), 'MTT Dice CV': (0.024, [0.014, 0.034], 'p 6e-06')}
+vox minus DuoPIC {'mean AUC': (0.046, [0.038, 0.053], 'p 1e-18'), 'mean AP': (0.009, [0.001, 0.016], 'p 0.8'), 'CBF Dice CV': (-0.015, [-0.022, -0.008], 'p 8e-06'), 'MTT Dice CV': (0.007, [-0.002, 0.017], 'p 0.3')}
+vox minus DuoPIC ID-CBV oSVD texture {'mean AUC': (0.067, [0.057, 0.077], 'p 3e-20'), 'mean AP': (0.029, [0.021, 0.037], 'p 8e-12'), 'CBF Dice CV': (0.006, [-0.004, 0.016], 'p 0.9'), 'MTT Dice CV': (0.072, [0.056, 0.089], 'p 4e-16')}

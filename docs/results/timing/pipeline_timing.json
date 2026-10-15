@@ -1,0 +1,44 @@
+{
+  "patients": {
+    "training_1": {
+      "voxels": 148651,
+      "frames": 80,
+      "ROI fit s": 8.925967916002264,
+      "voxel fit s": 101.11785741700442,
+      "oSVD s": 2.7627849590062397
+    },
+    "training_10": {
+      "voxels": 71974,
+      "frames": 80,
+      "ROI fit s": 9.713570332998643,
+      "voxel fit s": 45.27774958399823,
+      "oSVD s": 1.2601809589978075
+    },
+    "training_11": {
+      "voxels": 166576,
+      "frames": 80,
+      "ROI fit s": 12.637615875006304,
+      "voxel fit s": 110.71231637499295,
+      "oSVD s": 2.7571935829910217
+    },
+    "training_22": {
+      "voxels": 233701,
+      "frames": 40,
+      "ROI fit s": 8.76594283299346,
+      "voxel fit s": 36.83996958300122,
+      "oSVD s": 1.6485504579904955
+    },
+    "training_4": {
+      "voxels": 166991,
+      "frames": 80,
+      "ROI fit s": 13.838195958000142,
+      "voxel fit s": 116.8744843750028,
+      "oSVD s": 8.282993125001667
+    }
+  },
+  "median ROI fit s": 9.713570332998643,
+  "median voxel fit s": 101.11785741700442,
+  "median oSVD s": 2.7571935829910217,
+  "median voxels": 166576.0,
+  "threads": 1
+}

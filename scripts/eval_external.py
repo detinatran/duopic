@@ -14,6 +14,8 @@ CBV and the oSVD CBF texture). Per patient:
   * the vendor maps of the challenge (MR_rCBF, MR_rCBV, MR_MTT).
 Lesion ROC AUC of CBF (low), CBV (low) and MTT (high) relative to the brain
 median, as compare_osvd.py. Writes <out_root>/<prefix>_external/{per_patient.csv, summary.json}.
+--metrics also scores average precision, Dice and lesion volume (hemopic_plus/lesion_metrics.py)
+and writes <prefix>_external/{lesion_metrics.csv, lesion_metrics.json}.
 """
 import argparse
 import csv
@@ -35,6 +37,7 @@ from scipy.stats import wilcoxon  # noqa: E402
 
 from hemopic_plus.config import load_config  # noqa: E402
 from hemopic_plus.evaluation import MAPS, _lesion_scores, roc_auc  # noqa: E402
+from hemopic_plus.lesion_metrics import map_metrics, paired_bootstrap, summarize  # noqa: E402
 from hemopic_plus.io import SEG4_REL, find_nii, list_patients, load_nifti, save_nifti_like, squeeze_ctc, subject_id  # noqa: E402
 from hemopic_plus.npde.voxel import RoiModel, fit_voxels, smooth_curves, voxel_maps  # noqa: E402
 from hemopic_plus.osvd import osvd_maps  # noqa: E402
@@ -115,6 +118,17 @@ def work(args):
         for m, direction in MAPS:
             res[f"{name} {m}"] = auc(vols[m], brain, ot, direction)
         res[f"{name} mean"] = float(np.mean([res[f"{name} {m}"] for m, _ in MAPS]))
+    if a.metrics:
+        voxel_ml = float(np.prod(seg_img.header.get_zooms()[:3])) / 1000.0
+        rec = {"patient": pid}
+        for name, vols in maps.items():
+            rec[name] = {}
+            for m, direction in MAPS:
+                mm = map_metrics(vols[m], brain, ot, direction, voxel_ml)
+                if mm is not None:
+                    mm["auc"] = res[f"{name} {m}"]
+                    rec[name][m] = mm
+        res["_metrics"] = rec
     res["seconds"] = round(time.time() - t0, 1)
     return res
 
@@ -127,6 +141,7 @@ def main():
     p.add_argument("--workers", type=int, default=24)
     p.add_argument("--patients", type=int, nargs="*")
     p.add_argument("--voxel", action="store_true", help="refit DuoPIC-vox even when its maps exist")
+    p.add_argument("--metrics", action="store_true", help="also AP, Dice and lesion volume")
     a = p.parse_args()
     cfg = load_config(Path("configs") / f"{a.prefix}_full_aif.yaml", {k: v for k, v in (("data_root", a.data_root), ("out_root", a.out_root)) if v})
     out = cfg.resolve("out_root")
@@ -142,6 +157,25 @@ def main():
                 f"{k} {r.get(k + ' mean', np.nan):.3f}" for k in METHODS), flush=True)
     od = out / f"{a.prefix}_external"
     od.mkdir(parents=True, exist_ok=True)
+    records = [r.pop("_metrics") for r in rows if "_metrics" in r]
+    if records:
+        mrows, msumm = summarize(records, list(METHODS), MAPS)
+        for r in mrows:
+            for meth in METHODS:
+                r[f"{meth} mean AUC"] = np.nanmean([r.get(f"{meth} {m} AUC", np.nan) for m, _ in MAPS])
+                r[f"{meth} mean AP"] = np.nanmean([r.get(f"{meth} {m} AP", np.nan) for m, _ in MAPS])
+        msumm["paired, DuoPIC-vox minus"] = {
+            ref: {k: paired_bootstrap(mrows, f"DuoPIC-vox {k}", f"{ref} {k}")
+                  for k in ("mean AUC", "mean AP", "CBF Dice CV", "MTT Dice CV")} for ref in METHODS if ref != "DuoPIC-vox"}
+        mkeys = ["patient"] + sorted({k for r in mrows for k in r if k != "patient"})
+        with open(od / "lesion_metrics.csv", "w", newline="", encoding="utf8") as f:
+            wr = csv.DictWriter(f, fieldnames=mkeys)
+            wr.writeheader()
+            wr.writerows(mrows)
+        (od / "lesion_metrics.json").write_text(json.dumps(msumm, indent=1, default=float), encoding="utf8")
+        for meth, sm in msumm["methods"].items():
+            print(f"  {meth:28s} AUC {sm['mean AUC'][0]:.3f} [{sm['mean AUC'][1]:.3f}, {sm['mean AUC'][2]:.3f}]  AP {sm['mean AP'][0]:.3f}  "
+                  + "  ".join(f"{m} Dice {sm[m]['Dice (CV threshold)'][0]:.3f}" for m in ("CBF", "MTT") if m in sm), flush=True)
     keys = sorted({k for r in rows for k in r if k not in ("patient",)})
     with open(od / "per_patient.csv", "w", newline="", encoding="utf8") as f:
         wr = csv.writer(f)

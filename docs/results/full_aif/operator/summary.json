@@ -1,0 +1,35 @@
+{
+  "n_patients": 43,
+  "n_roi": 651,
+  "weights": 72609,
+  "settings": {
+    "config": "configs\\full_aif.yaml",
+    "data_root": null,
+    "out_root": null,
+    "folds": 5,
+    "steps": 3000,
+    "test_steps": 1000,
+    "restarts": 4,
+    "width": 32,
+    "modes": 16,
+    "layers": 4,
+    "threads": 6,
+    "hide_blocks": 5
+  },
+  "train data median per fold": {
+    "0": 0.00016642428818158805,
+    "1": 0.0001362511102342978,
+    "2": 0.00016790523659437895,
+    "3": 0.00017751716950442642,
+    "4": 0.00018484795873519033
+  },
+  "held-out data median, operator": 0.0008686348446644843,
+  "held-out data median, nmse_npde (npde eval)": 0.027269324051763102,
+  "operator better than nmse_npde (npde eval), fraction": 0.9861751152073732,
+  "held-out data median, nmse_pde (npde eval)": 0.04452019110264499,
+  "operator better than nmse_pde (npde eval), fraction": 0.9861751152073732,
+  "held-out data median, operator, GM": 0.001081629132386297,
+  "held-out data median, operator, WM": 0.0008008191362023354,
+  "hidden-frame error per ROI (sum over blocks), median, cold": 0.14989653529256203,
+  "hidden-frame error per ROI (sum over blocks), median, warm": 0.132823880307428
+}
