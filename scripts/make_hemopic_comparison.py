@@ -83,7 +83,7 @@ def fig_maps(out, data_root, pid, auc_vox, auc_hem, path, width=3.35):
     brain = load_nifti(base / SEG4_REL)[1] > 0
     ref_vols = isles(base)
     rows = [("ISLES ref.", ref_vols, aucs(ref_vols, brain, load_nifti(find_nii(base, "OT"))[1] > 0)),
-            ("HemoPIC [4]", hemopic(out, sub), auc_hem), ("DuoPIC-vox", duopic_vox(out, sub), auc_vox)]
+            ("HemoPIC [4]", hemopic(out, sub), auc_hem), ("DuoPIC", duopic_vox(out, sub), auc_vox)]
     best = {m: max(r[2][m] for r in rows) for m, _ in MAPS}
     W, lab_w, gap, cb_gap, cb_w, cb_lab = width, 0.17, 0.03, 0.06, 0.07, 0.3
     pw = (W - lab_w - 2 * gap - cb_gap - cb_w - cb_lab) / 3
@@ -142,7 +142,7 @@ def fig_maps_wide(out, data_root, pid, auc_vox, auc_hem, path, width=7.0, fs=7):
     brain = load_nifti(base / SEG4_REL)[1] > 0
     ref_vols = isles(base)
     groups = [("ISLES maps", ref_vols, aucs(ref_vols, brain, load_nifti(find_nii(base, "OT"))[1] > 0)),
-              ("HemoPIC", hemopic(out, sub), auc_hem), ("DuoPIC-vox", duopic_vox(out, sub), auc_vox)]
+              ("HemoPIC", hemopic(out, sub), auc_hem), ("DuoPIC", duopic_vox(out, sub), auc_vox)]
     best = {m: max(g[2][m] for g in groups) for m, _ in MAPS}
     gap, ggap, cb_gap, cb_w, cb_lab = 0.03, 0.14, 0.08, 0.08, 0.42
     pw = (width - 6 * gap - 2 * ggap - cb_gap - cb_w - cb_lab) / 9

@@ -113,15 +113,16 @@ def residuals_rescaled(out, data_root, cfg, ref):
     return res
 
 
-def fig_residuals_paper(out, data_root, cfg="full_aif", baseline="baseline", path=None, fs=12):
-    """Paper Fig. 2: one row, HemoPIC (`baseline`) and the three DuoPIC tissue models of `cfg`."""
+def fig_residuals_paper(out, data_root, cfg="full_aif", baseline="baseline", path=None, fs=12, size=(12, 2.55), legend_panel=0, dpi=200):
+    """Paper Fig. 2: one row, HemoPIC (`baseline`) and the three DuoPIC tissue models of `cfg`.
+    size: inches; at the printed size (e.g. 5.18 x 1.10) fs is the printed font size."""
     var = [("", "DuoPIC, compartment", C[0]), ("__pde", "DuoPIC, PDE", C[1]), ("__npde", "DuoPIC, neural PDE", C[2])]
     global VAR
     VAR = var
     res = residuals(out, data_root, cfg)
     base = residuals_rescaled(out, data_root, baseline, cfg) if baseline else None
     with plt.rc_context({"font.size": fs, "figure.facecolor": "white", "axes.facecolor": "white", "savefig.facecolor": "white"}):
-        fig, axes = plt.subplots(1, len(GROUPS), figsize=(12, 2.55), sharex=True)
+        fig, axes = plt.subplots(1, len(GROUPS), figsize=size, sharex=True)
         for j, (g, gl) in enumerate(GROUPS):
             ax = axes[j]
             ax.axhline(0, color=INK2, lw=0.8)
@@ -131,15 +132,68 @@ def fig_residuals_paper(out, data_root, cfg="full_aif", baseline="baseline", pat
                 m = np.nanmean(a, 0)
                 se = np.nanstd(a, 0) / np.sqrt(np.sum(np.isfinite(a), 0))
                 ax.fill_between(GRID, m - 2 * se, m + 2 * se, color=col, alpha=0.15, lw=0)
-                ax.plot(GRID, m, color=col, lw=1.8, ls=ls, label=lab)
+                ax.plot(GRID, m, color=col, lw=1.8 * min(1.0, size[0] / 12) ** 0.5, ls=ls, label=lab)
             n = len(res[('', g)])
             nb = f", HemoPIC n={len(base[g])}" if base and len(base[g]) != n else ""
             ax.set_title(f"{gl} (n={n}{nb})", loc="left", fontsize=fs, color=INK)
             ax.set_xlabel("seconds from the measured peak", fontsize=fs - 1)
-        axes[0].set_ylabel("(measured - fit) / peak")
-        axes[0].legend(fontsize=fs - 2, frameon=False)
-        fig.tight_layout()
-        fig.savefig(path or FIG / "duopic_residuals_paper.png", dpi=200)
+        axes[0].set_ylabel("(meas. \u2212 fit) / peak", fontsize=fs - 1, labelpad=1)
+        for ax in axes:
+            ax.tick_params(labelsize=fs - 1, length=2, pad=1)
+        axes[legend_panel].legend(fontsize=fs - 1, frameon=False, handlelength=1.6, labelspacing=0.2, borderaxespad=0.2,
+                                  loc="upper right" if legend_panel else "best")
+        fig.tight_layout(pad=0.4, w_pad=0.6)
+        fig.savefig(path or FIG / "duopic_residuals_paper.png", dpi=dpi)
+        plt.close(fig)
+
+
+def fig_residuals_column(out, data_root, cfg="full_aif", baseline="baseline", path=None, fs=6.5, size=(3.39, 1.1), dpi=600, grid=False):
+    """Paper Fig. 2 for one column: size is the printed size in inches, fs the printed font size;
+    grid puts the three panels in a 2x2 grid with the legend in the fourth cell."""
+    var = [("", "compartment", C[0]), ("__pde", "PDE", C[1]), ("__npde", "neural PDE", C[2])]
+    global VAR
+    VAR = var
+    res = residuals(out, data_root, cfg)
+    base = residuals_rescaled(out, data_root, baseline, cfg) if baseline else None
+    titles = {"GM": "GM", "WM": "WM", "lesion": "lesion ROIs"}
+    with plt.rc_context({"font.size": fs, "axes.linewidth": 0.5, "xtick.major.width": 0.5, "ytick.major.width": 0.5,
+                         "figure.facecolor": "white", "axes.facecolor": "white", "savefig.facecolor": "white"}):
+        if grid:
+            fig, axs = plt.subplots(2, 2, figsize=size, sharey=True)
+            axes, lax = [axs[0, 0], axs[0, 1], axs[1, 0]], axs[1, 1]
+            lax.axis("off")
+        else:
+            fig, axes = plt.subplots(1, len(GROUPS), figsize=size, sharex=True, sharey=True)
+        for ax, (g, _) in zip(axes, GROUPS):
+            ax.axhline(0, color=INK2, lw=0.5)
+            curves = ([("HemoPIC", INK2, np.array(base[g]), (0, (3, 1.5)))] if base else []) + \
+                     [(vl, col, np.array(res[(v, g)]), "-") for v, vl, col in var]
+            for lab, col, a, ls in curves:
+                m = np.nanmean(a, 0)
+                se = np.nanstd(a, 0) / np.sqrt(np.sum(np.isfinite(a), 0))
+                ax.fill_between(GRID, m - 2 * se, m + 2 * se, color=col, alpha=0.18, lw=0)
+                ax.plot(GRID, m, color=col, lw=0.9, ls=ls, label=lab)
+            ax.set_title(f"{titles[g]} (n={len(res[('', g)])})", fontsize=fs, color=INK, pad=2)
+            ax.set_xticks([-20, 0, 20, 40])
+            ax.tick_params(labelsize=fs, length=2, pad=1)
+            for s in ("top", "right"):
+                ax.spines[s].set_visible(False)
+        h, lab = axes[0].get_legend_handles_labels()
+        if grid:
+            axes[2].set_xlabel("seconds from the peak", fontsize=fs, labelpad=1)
+            axes[1].tick_params(labelleft=True)
+            fig.supylabel("residual / peak", fontsize=fs, x=0.01)
+            fig.tight_layout(pad=0.3, w_pad=0.8, h_pad=0.5, rect=(0.035, 0, 1, 1))
+            wm, les = axes[1].get_position(), axes[2].get_position()
+            fig.legend(h, lab, loc="center", bbox_to_anchor=((wm.x0 + wm.x1) / 2, (les.y0 + les.y1) / 2),
+                       bbox_transform=fig.transFigure, fontsize=fs, frameon=False, handlelength=2.0, labelspacing=0.45)
+        else:
+            axes[0].set_ylabel("residual / peak", fontsize=fs, labelpad=1)
+            fig.supxlabel("seconds from the measured peak", fontsize=fs, y=0.0)
+            fig.legend(h, lab, loc="upper center", ncol=len(lab), fontsize=fs, frameon=False, handlelength=1.6,
+                       columnspacing=0.9, handletextpad=0.4, borderaxespad=0.1)
+            fig.tight_layout(pad=0.3, w_pad=1.0, rect=(0, 0, 1, 0.86))
+        fig.savefig(path or FIG / "duopic_residuals_column.png", dpi=dpi, bbox_inches="tight", pad_inches=0.02)
         plt.close(fig)
 
 

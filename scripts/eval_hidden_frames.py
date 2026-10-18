@@ -84,8 +84,11 @@ def run_subject(args):
     rows = []
     if models is None or "compartment" in models:
         tank = load_subject(fit_dir)
-        th = prior_start(tank)[:, :7]
+        th = prior_start(tank)[:, :tank.lo.shape[1]]
         rows += block_rows(tank, "compartment", fit_dir.name, blocks, [[th[i]] for i in range(len(tank.roi_ids))])
+        if nd is None:
+            print(f"  {fit_dir.name}: {len(tank.roi_ids)} ROIs, {time.time() - t0:.0f}s", flush=True)
+            return rows
     pb = load_npde_subject(fit_dir, nd)
     starts = [[] for _ in pb.roi_ids]
     for pe in PE_STARTS:
@@ -116,9 +119,10 @@ def main():
     cfg = load_config(a.config, {k: v for k, v in (("out_root", a.out_root),) if v})
     root = cfg.resolve("out_root") / cfg.name
     npde_root = root.parent / f"{cfg.name}__npde"
-    pids = a.patients or list_patients(npde_root)
-    jobs = [(root / subject_id(pid), npde_root / subject_id(pid), a.blocks, a.models) for pid in pids
-            if (npde_root / subject_id(pid) / "npde_theta.npz").exists() and (root / subject_id(pid) / "fit_curves.npz").exists()]
+    tank_only = a.models == ["compartment"]
+    pids = a.patients or list_patients(root if tank_only else npde_root)
+    jobs = [(root / subject_id(pid), None if tank_only else npde_root / subject_id(pid), a.blocks, a.models) for pid in pids
+            if (tank_only or (npde_root / subject_id(pid) / "npde_theta.npz").exists()) and (root / subject_id(pid) / "fit_curves.npz").exists()]
     workers = a.workers or os.cpu_count() or 1
     print(f"[{cfg.name}] hidden-frame prediction on {len(jobs)} subjects, {a.blocks} blocks, {workers} workers")
     t0 = time.time()
@@ -126,7 +130,7 @@ def main():
     with ProcessPoolExecutor(max_workers=workers) as ex:
         for r in ex.map(run_subject, jobs):
             rows.extend(r)
-    out = npde_root / "eval"
+    out = (root if tank_only else npde_root) / "eval"
     out.mkdir(exist_ok=True)
     with open(out / a.output, "w", newline="", encoding="utf8") as f:
         w = csv.DictWriter(f, fieldnames=list(rows[0].keys()))

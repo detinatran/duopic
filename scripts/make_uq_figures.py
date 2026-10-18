@@ -223,11 +223,11 @@ def fig_maps(out, data_root, cfgs, pid=22, show_title=True):
     plt.close(fig)
 
 
-def fig_maps_column(out, data_root, cfgs, pid=22, width=3.35, fs=6, labels=None, titles=None):
+def fig_maps_column(out, data_root, cfgs, pid=22, width=3.35, fs=6, labels=None, titles=None, end_ticks=False):
     """Same panels as fig_maps, laid out for one column of a two-column paper:
     no title, white background, one shared colour bar under each column.
     fs: font size in points at the printed width; labels: row names (default LABEL);
-    titles: column titles in place of the defaults."""
+    titles: column titles in place of the defaults; end_ticks: colour bars labelled at 0 and max only."""
     import nibabel as nib
 
     def load(p):
@@ -281,7 +281,7 @@ def fig_maps_column(out, data_root, cfgs, pid=22, width=3.35, fs=6, labels=None,
             cax = fig.add_subplot(gs[len(cfgs), j])
             pos = cax.get_position()
             cax.set_position([pos.x0 + 0.12 * pos.width, pos.y0, 0.76 * pos.width, pos.height])
-            cb = fig.colorbar(im, cax=cax, orientation="horizontal", ticks=[0, vmax / 2, vmax], format="%g")
+            cb = fig.colorbar(im, cax=cax, orientation="horizontal", ticks=[0, vmax] if end_ticks else [0, vmax / 2, vmax], format="%g")
             cb.ax.tick_params(labelsize=fs, length=1.5, pad=1)
             cb.outline.set_linewidth(0.4)
         fig.savefig(FIG / f"{PREFIX}maps_column.png", dpi=400)
